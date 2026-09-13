@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../lib/api';
-import { UserPlus } from 'lucide-react';
+import { UserPlus, FileText } from 'lucide-react';
 
 export const Register: React.FC = () => {
   const [name, setName] = useState('');
@@ -31,61 +31,66 @@ export const Register: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8 bg-white p-8 rounded-xl shadow-md border border-gray-100">
-        <div>
-          <div className="mx-auto h-12 w-12 flex items-center justify-center rounded-full bg-blue-100 text-blue-600">
-            <UserPlus size={24} />
+    <div className="min-h-screen flex items-center justify-center relative overflow-hidden bg-gray-50 dark:bg-[#0b0e14] py-12">
+      {/* Dynamic Background */}
+      <div className="absolute top-[-20%] right-[-10%] w-[50%] h-[50%] rounded-full bg-purple-400/20 dark:bg-blue-600/30 blur-[120px] pointer-events-none -z-10 animate-pulse" />
+      <div className="absolute bottom-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-blue-400/20 dark:bg-purple-600/30 blur-[100px] pointer-events-none -z-10 animate-pulse" style={{ animationDelay: '1s' }} />
+
+      <div className="max-w-md w-full mx-4 space-y-8 card p-10 z-10">
+        <div className="flex flex-col items-center">
+          <div className="h-16 w-16 flex items-center justify-center rounded-2xl bg-gradient-to-tr from-blue-600 to-purple-600 text-white shadow-lg mb-6 shadow-blue-500/30">
+            <FileText size={32} />
           </div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">Create an Account</h2>
+          <h2 className="text-center text-3xl font-black text-gray-900 dark:text-white mb-2">Create Account</h2>
+          <p className="text-center text-sm font-medium text-gray-500 dark:text-gray-400">Join your team on ReportPulse</p>
         </div>
 
         {error && (
-          <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-md text-sm">
+          <div className="bg-red-500/10 border border-red-500/30 text-red-600 dark:text-red-400 px-4 py-3 rounded-xl text-sm font-semibold text-center backdrop-blur-sm">
             {error}
           </div>
         )}
 
-        <form className="mt-8 space-y-4" onSubmit={handleSubmit}>
+        <form className="mt-8 space-y-5" onSubmit={handleSubmit}>
           <div>
-            <label className="block text-sm font-medium text-gray-700">Full Name</label>
+            <label className="label-text">Full Name</label>
             <input
               type="text"
               required
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              className="input-field"
               placeholder="Jane Doe"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700">Email Address</label>
+            <label className="label-text">Email Address</label>
             <input
               type="email"
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              className="input-field"
               placeholder="jane@example.com"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700">Password</label>
+            <label className="label-text">Password</label>
             <input
               type="password"
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              className="input-field"
               placeholder="••••••••"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700">Role</label>
+            <label className="label-text">Role</label>
             <select
               value={role}
               onChange={(e) => setRole(e.target.value as 'TEAM_MEMBER' | 'MANAGER')}
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              className="input-field appearance-none"
             >
               <option value="TEAM_MEMBER">Team Member</option>
               <option value="MANAGER">Manager</option>
@@ -95,16 +100,17 @@ export const Register: React.FC = () => {
           <button
             type="submit"
             disabled={loading}
-            className="w-full mt-4 flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+            className="btn-primary w-full mt-2"
           >
-            {loading ? 'Registering...' : 'Register'}
+            <UserPlus className="w-5 h-5" />
+            <span>{loading ? 'Registering...' : 'Register'}</span>
           </button>
         </form>
 
-        <div className="text-center mt-4">
-          <p className="text-sm text-gray-600">
+        <div className="text-center mt-6 pt-6 border-t border-gray-200/50 dark:border-white/10">
+          <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
             Already have an account?{' '}
-            <Link to="/login" className="font-medium text-blue-600 hover:text-blue-500">
+            <Link to="/login" className="font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600 hover:opacity-80 transition-opacity">
               Sign in
             </Link>
           </p>
