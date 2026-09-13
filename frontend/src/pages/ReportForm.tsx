@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { api } from '../lib/api';
-import { Plus, Trash2, Save, Send, AlertCircle } from 'lucide-react';
+import { Plus, Trash2, Save, Send, AlertCircle, AlertTriangle, Trophy, Calendar } from 'lucide-react';
+import { getWeekOptions, type WeekOption } from '../utils/dateUtils';
 
 interface Task {
   taskName: string;
@@ -14,6 +15,16 @@ interface Task {
   deliverable: string;
 }
 
+interface BlockerItem {
+  description: string;
+  isKeyBlocker: boolean;
+}
+
+interface AchievementItem {
+  description: string;
+  isKeyAchievement: boolean;
+}
+
 interface Project {
   _id: string;
   name: string;
@@ -23,17 +34,27 @@ export const ReportForm: React.FC = () => {
   const { id } = useParams();
   const navigate = useNavigate();
 
+  const weekOptions = getWeekOptions();
+
   const [projects, setProjects] = useState<Project[]>([]);
   const [projectId, setProjectId] = useState('');
-  const [weekStart, setWeekStart] = useState('2026-09-07');
-  const [weekEnd, setWeekEnd] = useState('2026-09-13');
+
+  // Default to current week or the first generated option
+  const [selectedWeek, setSelectedWeek] = useState<WeekOption>(
+    weekOptions.find((w) => w.label.includes('(Current Week)')) || weekOptions[0]
+  );
+
   const [nextWeekTasks, setNextWeekTasks] = useState('');
-  const [blockers, setBlockers] = useState('');
-  const [keyBlocker, setKeyBlocker] = useState(false);
-  const [achievements, setAchievements] = useState('');
-  const [keyAchievement, setKeyAchievement] = useState(false);
   const [notes, setNotes] = useState('');
-  
+
+  // Dynamic Arrays for Blockers and Achievements
+  const [blockers, setBlockers] = useState<BlockerItem[]>([
+    { description: '', isKeyBlocker: false }
+  ]);
+  const [achievements, setAchievements] = useState<AchievementItem[]>([
+    { description: '', isKeyAchievement: false }
+  ]);
+
   const [hoursWorked, setHoursWorked] = useState({
     development: 0,
     testing: 0,
@@ -78,15 +99,39 @@ export const ReportForm: React.FC = () => {
           const res = await api.get(`/reports/${id}`);
           const r = res.data;
           setProjectId(r.projectId._id || r.projectId);
-          setWeekStart(r.weekStart.split('T')[0]);
-          setWeekEnd(r.weekEnd.split('T')[0]);
+
+          // Match existing report dates to an available week option, or create custom fallback
+          const fetchedStart = r.weekStart.split('T')[0];
+          const matchedOption = weekOptions.find((w) => w.weekStart === fetchedStart);
+          if (matchedOption) {
+            setSelectedWeek(matchedOption);
+          } else {
+            const fetchedEnd = r.weekEnd.split('T')[0];
+            setSelectedWeek({
+              label: `${fetchedStart} - ${fetchedEnd}`,
+              weekStart: fetchedStart,
+              weekEnd: fetchedEnd,
+              weekIdentifier: r.weekIdentifier || fetchedStart,
+            });
+          }
+
           setTasks(r.tasks || []);
           setHoursWorked(r.hoursWorked || { development: 0, testing: 0, meetings: 0, documentation: 0 });
           setNextWeekTasks(r.nextWeekTasks || '');
-          setBlockers(r.blockers || '');
-          setKeyBlocker(r.keyBlocker || false);
-          setAchievements(r.achievements || '');
-          setKeyAchievement(r.keyAchievement || false);
+
+          // Backward Compatibility & Array Safety
+          if (Array.isArray(r.blockers) && r.blockers.length > 0) {
+            setBlockers(r.blockers);
+          } else if (typeof r.blockers === 'string' && r.blockers) {
+            setBlockers([{ description: r.blockers, isKeyBlocker: r.keyBlocker || false }]);
+          }
+
+          if (Array.isArray(r.achievements) && r.achievements.length > 0) {
+            setAchievements(r.achievements);
+          } else if (typeof r.achievements === 'string' && r.achievements) {
+            setAchievements([{ description: r.achievements, isKeyAchievement: r.keyAchievement || false }]);
+          }
+
           setNotes(r.notes || '');
         } catch (err) {
           setError('Failed to load report details');
@@ -96,6 +141,15 @@ export const ReportForm: React.FC = () => {
     }
   }, [id]);
 
+  // Week Selector Handler
+  const handleWeekSelect = (identifier: string) => {
+    const found = weekOptions.find((w) => w.weekIdentifier === identifier);
+    if (found) {
+      setSelectedWeek(found);
+    }
+  };
+
+  // Task Handlers
   const handleAddTask = () => {
     setTasks([
       ...tasks,
@@ -122,21 +176,69 @@ export const ReportForm: React.FC = () => {
     setTasks(updated);
   };
 
+  // Blocker Handlers
+  const handleAddBlocker = () => {
+    setBlockers([...blockers, { description: '', isKeyBlocker: false }]);
+  };
+
+  const handleRemoveBlocker = (index: number) => {
+    setBlockers(blockers.filter((_, i) => i !== index));
+  };
+
+  const handleBlockerTextChange = (index: number, text: string) => {
+    const updated = [...blockers];
+    updated[index].description = text;
+    setBlockers(updated);
+  };
+
+  const handleToggleKeyBlocker = (index: number) => {
+    const updated = blockers.map((item, i) => ({
+      ...item,
+      isKeyBlocker: i === index ? !item.isKeyBlocker : false,
+    }));
+    setBlockers(updated);
+  };
+
+  // Achievement Handlers
+  const handleAddAchievement = () => {
+    setAchievements([...achievements, { description: '', isKeyAchievement: false }]);
+  };
+
+  const handleRemoveAchievement = (index: number) => {
+    setAchievements(achievements.filter((_, i) => i !== index));
+  };
+
+  const handleAchievementTextChange = (index: number, text: string) => {
+    const updated = [...achievements];
+    updated[index].description = text;
+    setAchievements(updated);
+  };
+
+  const handleToggleKeyAchievement = (index: number) => {
+    const updated = achievements.map((item, i) => ({
+      ...item,
+      isKeyAchievement: i === index ? !item.isKeyAchievement : false,
+    }));
+    setAchievements(updated);
+  };
+
   const handleSubmit = async (isSubmit: boolean) => {
     setError('');
     setLoading(true);
 
+    const cleanBlockers = blockers.filter((b) => b.description.trim() !== '');
+    const cleanAchievements = achievements.filter((a) => a.description.trim() !== '');
+
     const payload = {
       projectId,
-      weekStart,
-      weekEnd,
+      weekStart: selectedWeek.weekStart,
+      weekEnd: selectedWeek.weekEnd,
+      weekIdentifier: selectedWeek.weekIdentifier,
       tasks,
       hoursWorked,
       nextWeekTasks,
-      blockers,
-      keyBlocker,
-      achievements,
-      keyAchievement,
+      blockers: cleanBlockers,
+      achievements: cleanAchievements,
       notes,
       isSubmit,
     };
@@ -170,8 +272,8 @@ export const ReportForm: React.FC = () => {
         )}
 
         <div className="space-y-8">
-          {/* Project & Dates */}
-          <div className="card-panel grid grid-cols-1 md:grid-cols-3 gap-6">
+          {/* Project & Unified Week Selection */}
+          <div className="card-panel grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <label className="label-text">Project</label>
               <select
@@ -188,23 +290,21 @@ export const ReportForm: React.FC = () => {
             </div>
 
             <div>
-              <label className="label-text">Week Start</label>
-              <input
-                type="date"
-                value={weekStart}
-                onChange={(e) => setWeekStart(e.target.value)}
+              <label className="label-text flex items-center space-x-1.5">
+                <Calendar className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+                <span>Report Week</span>
+              </label>
+              <select
+                value={selectedWeek.weekIdentifier}
+                onChange={(e) => handleWeekSelect(e.target.value)}
                 className="input-field"
-              />
-            </div>
-
-            <div>
-              <label className="label-text">Week End</label>
-              <input
-                type="date"
-                value={weekEnd}
-                onChange={(e) => setWeekEnd(e.target.value)}
-                className="input-field"
-              />
+              >
+                {weekOptions.map((w) => (
+                  <option key={w.weekIdentifier} value={w.weekIdentifier}>
+                    {w.label}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
 
@@ -225,6 +325,7 @@ export const ReportForm: React.FC = () => {
             <div className="space-y-4">
               {tasks.map((task, idx) => (
                 <div key={idx} className="p-6 card-panel space-y-4 relative group transition-all hover:shadow-lg">
+                  {/* Row 1: Task Name & Delete Action */}
                   <div className="flex justify-between items-start gap-4">
                     <div className="flex-1">
                       <label className="label-text uppercase tracking-wider text-xs">Task Name</label>
@@ -247,7 +348,34 @@ export const ReportForm: React.FC = () => {
                     )}
                   </div>
 
-                  <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                  {/* Row 2: Deliverable / Output Produced */}
+                  <div>
+                    <label className="label-text uppercase tracking-wider text-xs">Output / Deliverable Produced</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. PR #402 merged, API documentation published, design spec completed..."
+                      value={task.deliverable || ''}
+                      onChange={(e) => handleTaskChange(idx, 'deliverable', e.target.value)}
+                      className="input-field"
+                    />
+                  </div>
+
+                  {/* Row 3: Metrics & Selectors */}
+                  <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
+                    <div>
+                      <label className="label-text uppercase tracking-wider text-xs">Status</label>
+                      <select
+                        value={task.status || 'In Progress'}
+                        onChange={(e) => handleTaskChange(idx, 'status', e.target.value)}
+                        className="input-field"
+                      >
+                        <option value="In Progress">In Progress</option>
+                        <option value="Completed">Completed</option>
+                        <option value="On Hold">On Hold</option>
+                        <option value="Cancelled">Cancelled</option>
+                      </select>
+                    </div>
+
                     <div>
                       <label className="label-text uppercase tracking-wider text-xs">Priority</label>
                       <select
@@ -265,6 +393,8 @@ export const ReportForm: React.FC = () => {
                       <label className="label-text uppercase tracking-wider text-xs">Planned %</label>
                       <input
                         type="number"
+                        min="0"
+                        max="100"
                         value={task.plannedPercent}
                         onChange={(e) => handleTaskChange(idx, 'plannedPercent', Number(e.target.value))}
                         className="input-field"
@@ -275,6 +405,8 @@ export const ReportForm: React.FC = () => {
                       <label className="label-text uppercase tracking-wider text-xs">Actual %</label>
                       <input
                         type="number"
+                        min="0"
+                        max="100"
                         value={task.actualPercent}
                         onChange={(e) => handleTaskChange(idx, 'actualPercent', Number(e.target.value))}
                         className="input-field"
@@ -285,6 +417,7 @@ export const ReportForm: React.FC = () => {
                       <label className="label-text uppercase tracking-wider text-xs">Plan Hrs</label>
                       <input
                         type="number"
+                        min="0"
                         value={task.plannedHours}
                         onChange={(e) => handleTaskChange(idx, 'plannedHours', Number(e.target.value))}
                         className="input-field"
@@ -295,6 +428,7 @@ export const ReportForm: React.FC = () => {
                       <label className="label-text uppercase tracking-wider text-xs">Spent Hrs</label>
                       <input
                         type="number"
+                        min="0"
                         value={task.spentHours}
                         onChange={(e) => handleTaskChange(idx, 'spentHours', Number(e.target.value))}
                         className="input-field"
@@ -349,12 +483,125 @@ export const ReportForm: React.FC = () => {
             </div>
           </div>
 
-          {/* Next Week & Blockers */}
+          {/* Key Achievements & Dynamic Blockers */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            {/* Blockers & Risks Dynamic Section */}
+            <div className="card-panel border-orange-200/50 dark:border-orange-500/20 space-y-4">
+              <div className="flex justify-between items-center">
+                <label className="section-title !mb-0 text-orange-600 dark:text-orange-400 flex items-center space-x-2">
+                  <AlertTriangle className="w-5 h-5" />
+                  <span>Blockers & Risks</span>
+                </label>
+                <button
+                  type="button"
+                  onClick={handleAddBlocker}
+                  className="text-xs text-orange-600 dark:text-orange-400 font-semibold flex items-center space-x-1 hover:bg-orange-500/10 px-2.5 py-1 rounded-lg transition-colors"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Add Blocker</span>
+                </button>
+              </div>
+
+              <div className="space-y-3">
+                {blockers.map((item, idx) => (
+                  <div key={idx} className="p-3 bg-white/40 dark:bg-black/20 rounded-xl border border-orange-200/40 dark:border-orange-500/20 space-y-2 relative group">
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        value={item.description}
+                        onChange={(e) => handleBlockerTextChange(idx, e.target.value)}
+                        placeholder={`Blocker #${idx + 1}...`}
+                        className="input-field text-sm py-1.5"
+                      />
+                      {blockers.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveBlocker(idx)}
+                          className="text-gray-400 hover:text-red-500 p-1 rounded-lg transition-colors"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="flex justify-end">
+                      <label className="flex items-center space-x-2 text-xs font-semibold cursor-pointer text-orange-600 dark:text-orange-400">
+                        <input
+                          type="checkbox"
+                          checked={item.isKeyBlocker}
+                          onChange={() => handleToggleKeyBlocker(idx)}
+                          className="rounded text-orange-600 focus:ring-orange-500 bg-transparent border-orange-300"
+                        />
+                        <span>Flag as Key Blocker</span>
+                      </label>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Achievements Dynamic Section */}
+            <div className="card-panel border-green-200/50 dark:border-green-500/20 space-y-4">
+              <div className="flex justify-between items-center">
+                <label className="section-title !mb-0 text-green-600 dark:text-green-400 flex items-center space-x-2">
+                  <Trophy className="w-5 h-5" />
+                  <span>Key Achievements</span>
+                </label>
+                <button
+                  type="button"
+                  onClick={handleAddAchievement}
+                  className="text-xs text-green-600 dark:text-green-400 font-semibold flex items-center space-x-1 hover:bg-green-500/10 px-2.5 py-1 rounded-lg transition-colors"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Add Achievement</span>
+                </button>
+              </div>
+
+              <div className="space-y-3">
+                {achievements.map((item, idx) => (
+                  <div key={idx} className="p-3 bg-white/40 dark:bg-black/20 rounded-xl border border-green-200/40 dark:border-green-500/20 space-y-2 relative group">
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        value={item.description}
+                        onChange={(e) => handleAchievementTextChange(idx, e.target.value)}
+                        placeholder={`Achievement #${idx + 1}...`}
+                        className="input-field text-sm py-1.5"
+                      />
+                      {achievements.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveAchievement(idx)}
+                          className="text-gray-400 hover:text-red-500 p-1 rounded-lg transition-colors"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="flex justify-end">
+                      <label className="flex items-center space-x-2 text-xs font-semibold cursor-pointer text-green-600 dark:text-green-400">
+                        <input
+                          type="checkbox"
+                          checked={item.isKeyAchievement}
+                          onChange={() => handleToggleKeyAchievement(idx)}
+                          className="rounded text-green-600 focus:ring-green-500 bg-transparent border-green-300"
+                        />
+                        <span>Flag as Highlight</span>
+                      </label>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Next Week tasks & Notes */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div className="card-panel">
               <label className="section-title block">Planned for Next Week</label>
               <textarea
-                rows={4}
+                rows={5}
                 value={nextWeekTasks}
                 onChange={(e) => setNextWeekTasks(e.target.value)}
                 className="input-field resize-none"
@@ -362,57 +609,10 @@ export const ReportForm: React.FC = () => {
               />
             </div>
 
-            <div className="card-panel border-orange-200/50 dark:border-orange-500/20">
-              <div className="flex justify-between items-center mb-3">
-                <label className="section-title !mb-0 text-orange-600 dark:text-orange-400">Blockers & Risks</label>
-                <label className="flex items-center space-x-2 text-sm text-orange-600 dark:text-orange-400 font-bold cursor-pointer bg-orange-500/10 px-3 py-1.5 rounded-lg">
-                  <input
-                    type="checkbox"
-                    checked={keyBlocker}
-                    onChange={(e) => setKeyBlocker(e.target.checked)}
-                    className="rounded text-orange-600 focus:ring-orange-500 bg-transparent border-orange-300"
-                  />
-                  <span>Flag as Critical</span>
-                </label>
-              </div>
-              <textarea
-                rows={4}
-                value={blockers}
-                onChange={(e) => setBlockers(e.target.value)}
-                className="input-field resize-none"
-                placeholder="Describe any issues or external dependencies blocking work..."
-              />
-            </div>
-          </div>
-
-          {/* Key Achievements & Notes */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div className="card-panel border-green-200/50 dark:border-green-500/20">
-              <div className="flex justify-between items-center mb-3">
-                <label className="section-title !mb-0 text-green-600 dark:text-green-400">Key Achievements</label>
-                <label className="flex items-center space-x-2 text-sm text-green-600 dark:text-green-400 font-bold cursor-pointer bg-green-500/10 px-3 py-1.5 rounded-lg">
-                  <input
-                    type="checkbox"
-                    checked={keyAchievement}
-                    onChange={(e) => setKeyAchievement(e.target.checked)}
-                    className="rounded text-green-600 focus:ring-green-500 bg-transparent border-green-300"
-                  />
-                  <span>Flag as Highlight</span>
-                </label>
-              </div>
-              <textarea
-                rows={4}
-                value={achievements}
-                onChange={(e) => setAchievements(e.target.value)}
-                className="input-field resize-none"
-                placeholder="Summarize milestones or wins reached..."
-              />
-            </div>
-
             <div className="card-panel">
               <label className="section-title block">Additional Notes</label>
               <textarea
-                rows={4}
+                rows={5}
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 className="input-field resize-none"

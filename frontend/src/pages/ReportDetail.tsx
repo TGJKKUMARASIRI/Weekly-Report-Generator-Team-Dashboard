@@ -2,16 +2,26 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { api } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
-import { Edit3, CheckCircle, AlertTriangle, ArrowLeft } from 'lucide-react';
+import { Edit3, CheckCircle, AlertTriangle, ArrowLeft, Trophy } from 'lucide-react';
+
+interface BlockerItem {
+  description: string;
+  isKeyBlocker: boolean;
+}
+
+interface AchievementItem {
+  description: string;
+  isKeyAchievement: boolean;
+}
 
 export const ReportDetail: React.FC = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
-  
+
   const [report, setReport] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  
+
   const [reviewModal, setReviewModal] = useState<{ open: boolean; action: 'APPROVED' | 'REQUEST_CORRECTION' | null }>({
     open: false,
     action: null,
@@ -43,7 +53,7 @@ export const ReportDetail: React.FC = () => {
       });
       setReviewModal({ open: false, action: null });
       setReviewComment('');
-      fetchReport(); // Refresh data
+      fetchReport();
     } catch (err) {
       alert('Failed to submit review');
     }
@@ -71,14 +81,28 @@ export const ReportDetail: React.FC = () => {
   const canEdit = isOwner && (report.status === 'DRAFT' || report.status === 'NEEDS_CORRECTION');
   const canReview = isManager && report.status === 'SUBMITTED';
 
+  // Normalize array/string formats for Blockers
+  const normalizedBlockers: BlockerItem[] = Array.isArray(report.blockers)
+    ? report.blockers
+    : typeof report.blockers === 'string' && report.blockers.trim()
+      ? [{ description: report.blockers, isKeyBlocker: report.keyBlocker || false }]
+      : [];
+
+  // Normalize array/string formats for Achievements
+  const normalizedAchievements: AchievementItem[] = Array.isArray(report.achievements)
+    ? report.achievements
+    : typeof report.achievements === 'string' && report.achievements.trim()
+      ? [{ description: report.achievements, isKeyAchievement: report.keyAchievement || false }]
+      : [];
+
   return (
     <div className="max-w-5xl mx-auto space-y-8 pb-12 relative">
-      
+
       {/* Header & Actions */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <button 
-            onClick={() => navigate(-1)} 
+          <button
+            onClick={() => navigate(-1)}
             className="flex items-center space-x-2 text-gray-500 hover:text-blue-600 dark:hover:text-purple-400 font-bold text-sm mb-4 transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
@@ -94,9 +118,9 @@ export const ReportDetail: React.FC = () => {
           <div className="text-lg">
             {getStatusBadge(report.status)}
           </div>
-          
+
           {canEdit && (
-            <button 
+            <button
               onClick={() => navigate(`/reports/${id}/edit`)}
               className="btn-primary"
             >
@@ -107,14 +131,14 @@ export const ReportDetail: React.FC = () => {
 
           {canReview && (
             <div className="flex items-center space-x-3">
-              <button 
+              <button
                 onClick={() => setReviewModal({ open: true, action: 'REQUEST_CORRECTION' })}
                 className="btn-danger"
               >
                 <AlertTriangle className="w-4 h-4" />
                 <span>Request Correction</span>
               </button>
-              <button 
+              <button
                 onClick={() => setReviewModal({ open: true, action: 'APPROVED' })}
                 className="btn-primary !bg-gradient-to-r !from-green-600 !to-emerald-600 !shadow-green-500/30"
               >
@@ -148,7 +172,9 @@ export const ReportDetail: React.FC = () => {
             <thead>
               <tr>
                 <th className="table-header">Task Name</th>
+                <th className="table-header">Status</th>
                 <th className="table-header">Priority</th>
+                <th className="table-header">Deliverable / Output</th>
                 <th className="table-header">Progress (Actual / Planned)</th>
                 <th className="table-header">Hours (Spent / Planned)</th>
               </tr>
@@ -158,12 +184,24 @@ export const ReportDetail: React.FC = () => {
                 <tr key={idx} className="table-row cursor-default">
                   <td className="table-cell font-bold">{task.taskName}</td>
                   <td className="table-cell">
-                    <span className={`px-2 py-1 rounded text-xs font-bold ${
-                      task.priority === 'High' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' :
-                      task.priority === 'Medium' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400' :
-                      'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                    }`}>
+                    <span className={`px-2 py-1 rounded text-xs font-bold ${task.status === 'Completed' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
+                        task.status === 'In Progress' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' :
+                          'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300'
+                      }`}>
+                      {task.status || 'In Progress'}
+                    </span>
+                  </td>
+                  <td className="table-cell">
+                    <span className={`px-2 py-1 rounded text-xs font-bold ${task.priority === 'High' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' :
+                        task.priority === 'Medium' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400' :
+                          'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                      }`}>
                       {task.priority}
+                    </span>
+                  </td>
+                  <td className="table-cell">
+                    <span className="text-xs text-gray-600 dark:text-gray-400 break-words max-w-xs block">
+                      {task.deliverable || '—'}
                     </span>
                   </td>
                   <td className="table-cell">
@@ -199,22 +237,66 @@ export const ReportDetail: React.FC = () => {
         </div>
 
         <div className="space-y-8">
+          {/* Blockers & Risks Section */}
           <div className="card p-6 border-l-4 border-orange-500">
             <h2 className="section-title text-orange-600 dark:text-orange-400 flex items-center space-x-2">
               <AlertTriangle className="w-5 h-5" />
               <span>Blockers & Risks</span>
-              {report.keyBlocker && <span className="badge badge-warning ml-2">Critical</span>}
             </h2>
-            <p className="mt-2 text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{report.blockers || 'None reported.'}</p>
+
+            {normalizedBlockers.length === 0 ? (
+              <p className="mt-3 text-gray-500 dark:text-gray-400 italic">None reported.</p>
+            ) : (
+              <ul className="mt-4 space-y-3">
+                {normalizedBlockers.map((item, idx) => (
+                  <li
+                    key={idx}
+                    className={`p-3 rounded-lg flex items-start justify-between gap-3 transition-colors ${item.isKeyBlocker
+                      ? 'bg-orange-500/10 border border-orange-500/30 text-orange-950 dark:text-orange-200 font-semibold'
+                      : 'bg-gray-500/5 text-gray-700 dark:text-gray-300'
+                      }`}
+                  >
+                    <div className="min-w-0 flex-1">
+                      <p className="whitespace-pre-wrap break-words">{item.description}</p>
+                    </div>
+                    {item.isKeyBlocker && (
+                      <span className="badge badge-warning flex-shrink-0 text-xs">Critical Blocker</span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
 
+          {/* Key Achievements Section */}
           <div className="card p-6 border-l-4 border-green-500">
             <h2 className="section-title text-green-600 dark:text-green-400 flex items-center space-x-2">
-              <CheckCircle className="w-5 h-5" />
+              <Trophy className="w-5 h-5" />
               <span>Key Achievements</span>
-              {report.keyAchievement && <span className="badge badge-success ml-2">Highlight</span>}
             </h2>
-            <p className="mt-2 text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{report.achievements || 'None reported.'}</p>
+
+            {normalizedAchievements.length === 0 ? (
+              <p className="mt-3 text-gray-500 dark:text-gray-400 italic">None reported.</p>
+            ) : (
+              <ul className="mt-4 space-y-3">
+                {normalizedAchievements.map((item, idx) => (
+                  <li
+                    key={idx}
+                    className={`p-3 rounded-lg flex items-start justify-between gap-3 transition-colors ${item.isKeyAchievement
+                      ? 'bg-green-500/10 border border-green-500/30 text-green-950 dark:text-green-200 font-semibold'
+                      : 'bg-gray-500/5 text-gray-700 dark:text-gray-300'
+                      }`}
+                  >
+                    <div className="min-w-0 flex-1">
+                      <p className="whitespace-pre-wrap break-words">{item.description}</p>
+                    </div>
+                    {item.isKeyAchievement && (
+                      <span className="badge badge-success flex-shrink-0 text-xs">Highlight</span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
         </div>
       </div>
@@ -238,7 +320,7 @@ export const ReportDetail: React.FC = () => {
             <h3 className="text-xl font-black text-gray-900 dark:text-white">
               {reviewModal.action === 'APPROVED' ? 'Approve Report' : 'Request Correction'}
             </h3>
-            
+
             <div>
               <label className="label-text">Feedback / Notes (Required for correction)</label>
               <textarea

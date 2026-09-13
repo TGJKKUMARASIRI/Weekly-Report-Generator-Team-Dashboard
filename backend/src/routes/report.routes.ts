@@ -55,10 +55,25 @@ router.get('/:id', authenticateJWT, async (req: AuthRequest, res) => {
 // POST /api/reports - Save Draft or Submit Report
 router.post('/', authenticateJWT, async (req: AuthRequest, res) => {
   try {
-    const { projectId, weekStart, weekEnd, tasks, hoursWorked, nextWeekTasks, blockers, keyBlocker, achievements, keyAchievement, notes, isSubmit } = req.body;
+
+    if (!req.user) {
+      return res.status(401).json({ message: 'Unauthorized: User missing from request' });
+    }
+
+    const { projectId, weekStart, weekEnd, weekIdentifier, tasks, hoursWorked, nextWeekTasks, blockers, achievements, notes, isSubmit } = req.body;
 
     if (!projectId || !weekStart || !weekEnd) {
       return res.status(400).json({ message: 'Project, Week Start, and Week End are required' });
+    }
+
+    // Quick validation before saving
+    const existingReport = await Report.findOne({ 
+      userId: req.user.id, 
+      weekIdentifier: req.body.weekIdentifier 
+    });
+
+    if (existingReport) {
+      return res.status(400).json({ message: "You have already created a report for this week." });
     }
 
     const reportStatus = isSubmit ? ReportStatus.SUBMITTED : ReportStatus.DRAFT;
@@ -68,20 +83,19 @@ router.post('/', authenticateJWT, async (req: AuthRequest, res) => {
       projectId,
       weekStart: new Date(weekStart),
       weekEnd: new Date(weekEnd),
+      weekIdentifier: weekIdentifier,
       status: reportStatus,
       tasks: tasks || [],
       hoursWorked: hoursWorked || { development: 0, testing: 0, meetings: 0, documentation: 0 },
       nextWeekTasks: nextWeekTasks || '',
-      blockers: blockers || '',
-      keyBlocker: !!keyBlocker,
-      achievements: achievements || '',
-      keyAchievement: !!keyAchievement,
+      blockers: blockers || [],
+      achievements: achievements || [],
       notes: notes || '',
       versions: []
     };
 
     if (isSubmit) {
-      reportData.versions = [{
+      (reportData.versions as any[]) = [{
         versionNumber: 1,
         snapshot: { ...reportData },
         submittedAt: new Date()
@@ -115,10 +129,13 @@ router.put('/:id', authenticateJWT, async (req: AuthRequest, res) => {
     if (tasks) report.tasks = tasks;
     if (hoursWorked) report.hoursWorked = hoursWorked;
     if (nextWeekTasks !== undefined) report.nextWeekTasks = nextWeekTasks;
-    if (blockers !== undefined) report.blockers = blockers;
-    if (keyBlocker !== undefined) report.keyBlocker = keyBlocker;
-    if (achievements !== undefined) report.achievements = achievements;
-    if (keyAchievement !== undefined) report.keyAchievement = keyAchievement;
+    if (blockers !== undefined) {
+      report.set('blockers', Array.isArray(blockers) ? blockers : []);
+    }
+
+    if (achievements !== undefined) {
+      report.set('achievements', Array.isArray(achievements) ? achievements : []);
+    }
     if (notes !== undefined) report.notes = notes;
 
     if (isSubmit) {

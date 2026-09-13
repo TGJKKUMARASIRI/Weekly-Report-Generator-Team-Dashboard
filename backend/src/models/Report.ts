@@ -18,6 +18,16 @@ const taskSchema = new Schema({
   deliverable: { type: String },
 });
 
+const blockerSchema = new Schema({
+  description: { type: String, required: true },
+  isKeyBlocker: { type: Boolean, default: false },
+});
+
+const achievementSchema = new Schema({
+  description: { type: String, required: true },
+  isKeyAchievement: { type: Boolean, default: false },
+});
+
 const reportVersionSchema = new Schema({
   versionNumber: { type: Number, required: true },
   snapshot: { type: Schema.Types.Mixed, required: true },
@@ -29,6 +39,7 @@ const reportSchema = new Schema({
   projectId: { type: Schema.Types.ObjectId, ref: 'Project', required: true },
   weekStart: { type: Date, required: true },
   weekEnd: { type: Date, required: true },
+  weekIdentifier: { type: String, required: true },
   status: { type: String, enum: Object.values(ReportStatus), default: ReportStatus.DRAFT },
   tasks: [taskSchema],
   hoursWorked: {
@@ -38,10 +49,8 @@ const reportSchema = new Schema({
     documentation: { type: Number, default: 0 },
   },
   nextWeekTasks: { type: String },
-  blockers: { type: String },
-  keyBlocker: { type: Boolean, default: false },
-  achievements: { type: String },
-  keyAchievement: { type: Boolean, default: false },
+  blockers: [blockerSchema],
+  achievements: [achievementSchema],
   notes: { type: String },
   reviews: [{
     reviewerId: { type: Schema.Types.ObjectId, ref: 'User' },
@@ -51,5 +60,8 @@ const reportSchema = new Schema({
   }],
   versions: [reportVersionSchema]
 }, { timestamps: true });
+
+// Enforce only 1 report per user per week
+reportSchema.index({ userId: 1, weekIdentifier: 1 }, { unique: true });
 
 export const Report = model('Report', reportSchema);

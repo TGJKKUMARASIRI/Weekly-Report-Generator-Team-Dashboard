@@ -38,8 +38,8 @@ export const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children }) => {
 
       {/* Sidebar */}
       <aside 
-        className={`fixed md:sticky top-0 h-screen w-72 glass shadow-2xl z-50 transform transition-transform duration-300 flex flex-col border-r border-white/40 dark:border-white/5 ${
-          isMobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
+        className={`fixed md:sticky top-4 h-[calc(100vh-2rem)] w-72 glass shadow-2xl z-50 rounded-3xl m-4 md:ml-4 md:my-4 flex flex-col border border-white/40 dark:border-white/10 transform transition-transform duration-300 ${
+          isMobileOpen ? 'translate-x-0' : '-translate-x-[120%] md:translate-x-0'
         }`}
       >
         {/* Logo area */}
@@ -93,13 +93,13 @@ export const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children }) => {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col min-w-0 min-h-screen relative overflow-hidden">
+      <main className="flex-1 flex flex-col min-w-0 relative">
         {/* Subtle background effects */}
-        <div className="absolute top-[-20%] left-[-10%] w-[60%] h-[60%] rounded-full bg-blue-400/20 dark:bg-purple-600/20 blur-[150px] pointer-events-none -z-10 animate-pulse" />
-        <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] rounded-full bg-purple-400/20 dark:bg-blue-600/20 blur-[120px] pointer-events-none -z-10 animate-pulse" style={{ animationDelay: '2s' }} />
+        <div className="fixed top-[-20%] left-[-10%] w-[60%] h-[60%] rounded-full bg-blue-400/20 dark:bg-purple-600/20 blur-[150px] pointer-events-none -z-10 animate-pulse" />
+        <div className="fixed bottom-[-10%] right-[-10%] w-[50%] h-[50%] rounded-full bg-purple-400/20 dark:bg-blue-600/20 blur-[120px] pointer-events-none -z-10 animate-pulse" style={{ animationDelay: '2s' }} />
 
         {/* Top Header */}
-        <header className="h-20 glass-panel sticky top-0 z-30 px-8 flex items-center justify-between border-b border-gray-200/50 dark:border-white/10 shadow-sm">
+        <header className="h-20 glass-panel sticky top-4 z-30 mx-4 mt-4 px-8 flex items-center justify-between border border-white/40 dark:border-white/10 shadow-sm rounded-3xl">
           <div className="flex items-center">
             <button 
               className="md:hidden mr-4 btn-icon"
@@ -137,7 +137,7 @@ export const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children }) => {
         </header>
 
         {/* Page Content */}
-        <div className="p-6 md:p-10 flex-1 overflow-y-auto">
+        <div className="p-4 md:p-8 flex-1">
           {children}
         </div>
       </main>
