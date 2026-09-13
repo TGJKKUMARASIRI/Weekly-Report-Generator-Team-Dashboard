@@ -64,12 +64,13 @@
   .btn-primary {
     @apply flex items-center justify-center space-x-2 px-6 py-2.5 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl text-sm font-bold shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 transition-all hover:-translate-y-0.5 disabled:opacity-50;
   }
-  
+
   .btn-secondary {
-    @apply flex items-center justify-center space-x-2 px-6 py-2.5 bg-white/50 border border-gray-300 rounded-xl text-sm font-bold text-gray-700 hover:bg-gray-50 transition-all disabled:opacity-50 backdrop-blur-sm;
+    @apply flex items-center justify-center space-x-2 px-6 py-2.5 bg-gradient-to-r from-blue-100 to-blue-200 text-blue-700 rounded-xl text-sm font-bold shadow-md shadow-blue-200/50 hover:from-blue-200 hover:to-blue-300 hover:shadow-lg transition-all hover:-translate-y-0.5 disabled:opacity-50;
   }
+
   .dark .btn-secondary {
-    @apply bg-black/30 border-gray-600 text-gray-300 hover:bg-white/10;
+    @apply bg-gradient-to-r from-gray-700 to-gray-800 text-gray-100 shadow-md shadow-black/40 hover:bg-gray-600 hover:shadow-black/60;
   }
 
   .btn-danger {

@@ -56,12 +56,13 @@ const reportSchema = new Schema({
     reviewerId: { type: Schema.Types.ObjectId, ref: 'User' },
     action: { type: String, enum: ['REQUEST_CORRECTION', 'APPROVED'] },
     comment: { type: String },
+    versionNumber: { type: Number },
     createdAt: { type: Date, default: Date.now },
   }],
   versions: [reportVersionSchema]
 }, { timestamps: true });
 
 // Enforce only 1 report per user per week
-reportSchema.index({ userId: 1, weekIdentifier: 1 }, { unique: true });
+reportSchema.index({ userId: 1, weekIdentifier: 1, projectId: 1 }, { unique: true });
 
 export const Report = model('Report', reportSchema);

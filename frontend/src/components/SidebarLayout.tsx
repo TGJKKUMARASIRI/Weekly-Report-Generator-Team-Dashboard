@@ -23,7 +23,9 @@ export const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children }) => {
   const navItems = [
     { name: 'Dashboard', path: '/', icon: LayoutDashboard },
     { name: 'Report List', path: '/reports', icon: List, exact: true },
-    { name: 'New Report', path: '/reports/new', icon: PlusCircle },
+    ...(user?.role === 'TEAM_MEMBER'
+      ? [{ name: 'New Report', path: '/reports/new', icon: PlusCircle }]
+      : []),
   ];
 
   return (

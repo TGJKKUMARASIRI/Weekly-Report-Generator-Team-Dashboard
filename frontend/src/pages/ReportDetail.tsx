@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { api } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
-import { Edit3, CheckCircle, AlertTriangle, ArrowLeft, Trophy } from 'lucide-react';
+import { Edit3, CheckCircle, AlertTriangle, ArrowLeft, Trophy, History } from 'lucide-react';
 
 interface BlockerItem {
   description: string;
@@ -14,13 +14,90 @@ interface AchievementItem {
   isKeyAchievement: boolean;
 }
 
+interface User {
+  _id: string; // or mongoose.Types.ObjectId
+  name: string;
+  email: string;
+  role: 'TEAM_MEMBER' | 'MANAGER' | 'ADMIN';
+}
+
+interface ReportVersion {
+  versionNumber: number;
+  snapshot: any;
+  submittedAt: string;
+}
+
+interface ReportReview {
+  action: 'APPROVED' | 'REQUEST_CORRECTION';
+  comment?: string;
+  versionNumber?: number;
+  createdAt: string;
+}
+
+const formatDateTime = (date: string) => new Date(date).toLocaleString();
+
+const VersionSummary: React.FC<{ report: any; title: string; submittedAt?: string }> = ({ report, title, submittedAt }) => (
+  <div className="card-panel h-full space-y-4">
+    <div className="flex items-start justify-between gap-4 border-b border-gray-200/50 dark:border-white/10 pb-3">
+      <div>
+        <h3 className="font-black text-gray-900 dark:text-white">{title}</h3>
+        {submittedAt && (
+          <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 mt-1">
+            Submitted {formatDateTime(submittedAt)}
+          </p>
+        )}
+      </div>
+      {report?.status && <span>{report.status === 'SUBMITTED' ? 'Submitted' : report.status}</span>}
+    </div>
+    <div className="grid grid-cols-2 gap-3 text-sm">
+      <div>
+        <span className="label-text">Tasks</span>
+        <p className="font-black">{report?.tasks?.length || 0}</p>
+      </div>
+      <div>
+        <span className="label-text">Hours</span>
+        <p className="font-black">
+          {Object.values(report?.hoursWorked || {}).reduce((total: number, hours) => total + Number(hours), 0)}h
+        </p>
+      </div>
+    </div>
+    <div>
+      <span className="label-text">Task Summary</span>
+      {report?.tasks?.length ? (
+        <ul className="space-y-1 text-sm text-gray-700 dark:text-gray-300">
+          {report.tasks.slice(0, 4).map((task: any, index: number) => (
+            <li key={index} className="truncate">{task.taskName || 'Untitled task'}</li>
+          ))}
+          {report.tasks.length > 4 && <li className="text-xs font-semibold text-gray-500">+{report.tasks.length - 4} more tasks</li>}
+        </ul>
+      ) : (
+        <p className="text-sm text-gray-500 dark:text-gray-400">No tasks recorded.</p>
+      )}
+    </div>
+    <div>
+      <span className="label-text">Blockers & Achievements</span>
+      <p className="text-sm text-gray-700 dark:text-gray-300">
+        {report?.blockers?.length || 0} blocker(s), {report?.achievements?.length || 0} achievement(s)
+      </p>
+    </div>
+    <div>
+      <span className="label-text">Planned Next Week</span>
+      <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap line-clamp-3">
+        {report?.nextWeekTasks || 'None recorded.'}
+      </p>
+    </div>
+  </div>
+);
+
 export const ReportDetail: React.FC = () => {
+  const [showHistory, setShowHistory] = useState(false);
   const { id } = useParams();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user } = useAuth() as { user: User | null };
 
   const [report, setReport] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [selectedVersionNumber, setSelectedVersionNumber] = useState<number | null>(null);
 
   const [reviewModal, setReviewModal] = useState<{ open: boolean; action: 'APPROVED' | 'REQUEST_CORRECTION' | null }>({
     open: false,
@@ -33,6 +110,8 @@ export const ReportDetail: React.FC = () => {
       setLoading(true);
       const res = await api.get(`/reports/${id}`);
       setReport(res.data);
+      const versions = res.data.versions || [];
+      setSelectedVersionNumber(versions.length > 1 ? versions[versions.length - 2].versionNumber : null);
     } catch (err) {
       console.error('Failed to load report', err);
     } finally {
@@ -76,9 +155,11 @@ export const ReportDetail: React.FC = () => {
     return <div className="p-12 text-center text-red-500 font-bold">Failed to load report.</div>;
   }
 
-  const isOwner = user?.id === (report.userId?._id || report.userId);
+  const isOwner = user?._id === (report.userId?._id || report.userId);
   const isManager = user?.role === 'MANAGER';
-  const canEdit = isOwner && (report.status === 'DRAFT' || report.status === 'NEEDS_CORRECTION');
+  const canEdit = user?.role === 'TEAM_MEMBER'
+    && isOwner
+    && (report.status === 'DRAFT' || report.status === 'NEEDS_CORRECTION');
   const canReview = isManager && report.status === 'SUBMITTED';
 
   // Normalize array/string formats for Blockers
@@ -94,6 +175,14 @@ export const ReportDetail: React.FC = () => {
     : typeof report.achievements === 'string' && report.achievements.trim()
       ? [{ description: report.achievements, isKeyAchievement: report.keyAchievement || false }]
       : [];
+
+  const versions: ReportVersion[] = report.versions || [];
+  const previousVersions = versions.slice(0, -1);
+  const selectedVersion = previousVersions.find((version) => version.versionNumber === selectedVersionNumber);
+  const reviews: ReportReview[] = report.reviews || [];
+  const correctionReviews = reviews.filter((review) => review.action === 'REQUEST_CORRECTION');
+  const latestCorrection = correctionReviews[correctionReviews.length - 1];
+  const showVersionHistory = versions.length > 1 && (report.status === 'SUBMITTED' || report.status === 'NEEDS_CORRECTION' || report.status === 'APPROVED');
 
   return (
     <div className="max-w-5xl mx-auto space-y-8 pb-12 relative">
@@ -150,6 +239,83 @@ export const ReportDetail: React.FC = () => {
         </div>
       </div>
 
+      {report.status === 'NEEDS_CORRECTION' && latestCorrection && (
+        <div className="card p-6 border-l-4 border-orange-500 bg-orange-500/10">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="w-6 h-6 text-orange-600 dark:text-orange-400 flex-shrink-0" />
+            <div>
+              <h2 className="section-title !mb-1 text-orange-700 dark:text-orange-300">Correction requested</h2>
+              <p className="text-sm font-semibold text-gray-600 dark:text-gray-300">
+                Version {latestCorrection.versionNumber || versions.length || 1} reviewed on {formatDateTime(latestCorrection.createdAt)}
+              </p>
+              <p className="mt-3 whitespace-pre-wrap text-gray-800 dark:text-gray-100">
+                {latestCorrection.comment || 'The manager requested corrections without additional comments.'}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showVersionHistory && (
+        <button
+          type="button"
+          onClick={() => setShowHistory(!showHistory)}
+          className="flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-100 hover:bg-blue-200 dark:bg-white/10 dark:hover:bg-white/20"
+        >
+          <History className="w-5 h-5 text-blue-600 dark:text-purple-400" />
+          <span className="section-title !mb-0">
+            {showHistory ? "Hide Report Version History" : "Show Report Version History"}
+          </span>
+        </button>
+      )}
+
+      {showVersionHistory && selectedVersion && showHistory && (
+        <section className="space-y-4">
+          {/* <div className="flex items-center gap-2">
+            <History className="w-5 h-5 text-blue-600 dark:text-purple-400" />
+            <h2 className="section-title !mb-0">Report Version History</h2>
+          </div> */}
+          <div className="flex flex-wrap gap-2">
+            {previousVersions.map((version) => (
+              <button
+                key={version.versionNumber}
+                type="button"
+                onClick={() => setSelectedVersionNumber(version.versionNumber)}
+                className={`px-4 py-2 rounded-xl text-sm font-bold transition-colors ${selectedVersionNumber === version.versionNumber
+                  ? 'bg-blue-600 text-white dark:bg-purple-600'
+                  : 'bg-blue-100 text-blue-700 hover:bg-blue-200 dark:bg-white/10 dark:text-gray-200 dark:hover:bg-white/20'
+                  }`}
+              >
+                Version {version.versionNumber} · {new Date(version.submittedAt).toLocaleDateString()}
+              </button>
+            ))}
+          </div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <VersionSummary
+              report={selectedVersion.snapshot}
+              title={`Previous Version ${selectedVersion.versionNumber}`}
+              submittedAt={selectedVersion.submittedAt}
+            />
+            <VersionSummary report={report} title="Current Version Under Review" />
+          </div>
+          <div className="card p-5 space-y-3">
+            <h3 className="font-black text-gray-900 dark:text-white">Review comments by version</h3>
+            {reviews.length === 0 ? (
+              <p className="text-sm text-gray-500 dark:text-gray-400">No review comments recorded.</p>
+            ) : (
+              reviews.map((review, index) => (
+                <div key={`${review.createdAt}-${index}`} className="border-l-2 border-gray-300 dark:border-white/20 pl-3">
+                  <p className="text-xs font-bold text-gray-500 dark:text-gray-400">
+                    Version {review.versionNumber || 'legacy'} · {review.action === 'APPROVED' ? 'Approved' : 'Correction requested'} · {formatDateTime(review.createdAt)}
+                  </p>
+                  {review.comment && <p className="mt-1 text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{review.comment}</p>}
+                </div>
+              ))
+            )}
+          </div>
+        </section>
+      )}
+
       {/* Meta Info */}
       <div className="card p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
@@ -185,16 +351,16 @@ export const ReportDetail: React.FC = () => {
                   <td className="table-cell font-bold">{task.taskName}</td>
                   <td className="table-cell">
                     <span className={`px-2 py-1 rounded text-xs font-bold ${task.status === 'Completed' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
-                        task.status === 'In Progress' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' :
-                          'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300'
+                      task.status === 'In Progress' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' :
+                        'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300'
                       }`}>
                       {task.status || 'In Progress'}
                     </span>
                   </td>
                   <td className="table-cell">
                     <span className={`px-2 py-1 rounded text-xs font-bold ${task.priority === 'High' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' :
-                        task.priority === 'Medium' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400' :
-                          'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                      task.priority === 'Medium' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400' :
+                        'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
                       }`}>
                       {task.priority}
                     </span>

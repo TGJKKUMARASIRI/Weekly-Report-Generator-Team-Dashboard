@@ -1,6 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../lib/api';
+import { ChevronLeft, ChevronRight, Filter } from 'lucide-react';
+import { getWeekOptions, type WeekOption } from '../utils/dateUtils';
 
 interface Report {
   _id: string;
@@ -12,27 +14,130 @@ interface Report {
   createdAt: string;
 }
 
+interface Project {
+  _id: string;
+  name: string;
+}
+
+interface ReportFilters {
+  status: string;
+  projectId: string;
+  startDate: string;
+  endDate: string;
+}
+
+interface ReportPagination {
+  totalReports: number;
+  currentPage: number;
+  totalPages: number;
+  hasNextPage: boolean;
+  hasPrevPage: boolean;
+}
+
+interface ReportsResponse {
+  data: Report[];
+  pagination: ReportPagination;
+}
+
+const PAGE_SIZE = 10;
+const EMPTY_FILTERS: ReportFilters = {
+  status: '',
+  projectId: '',
+  startDate: '',
+  endDate: '',
+};
+
 export const ReportList: React.FC = () => {
   const [reports, setReports] = useState<Report[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
-  const [statusFilter, setStatusFilter] = useState('');
+  const [draftFilters, setDraftFilters] = useState<ReportFilters>(EMPTY_FILTERS);
+  const [appliedFilters, setAppliedFilters] = useState<ReportFilters>(EMPTY_FILTERS);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pagination, setPagination] = useState<ReportPagination>({
+    totalReports: 0,
+    currentPage: 1,
+    totalPages: 1,
+    hasNextPage: false,
+    hasPrevPage: false,
+  });
+  const loadedPages = useRef(new Set<number>());
   const navigate = useNavigate();
+  const weekOptions = getWeekOptions();
+
+  const [selectedWeek, setSelectedWeek] = useState<WeekOption | null>(null);
 
   useEffect(() => {
-    const fetchReports = async () => {
+    const fetchInitialData = async () => {
       try {
         setLoading(true);
-        const url = statusFilter ? `/reports?status=${statusFilter}` : '/reports';
-        const res = await api.get(url);
-        setReports(res.data);
+        const [reportsResponse, projectsResponse] = await Promise.all([
+          api.get<ReportsResponse>(`/reports?page=1&limit=${PAGE_SIZE}`),
+          api.get<Project[]>('/projects'),
+        ]);
+        setReports(reportsResponse.data.data);
+        setPagination(reportsResponse.data.pagination);
+        loadedPages.current.add(1);
+        setProjects(projectsResponse.data);
       } catch (err) {
-        console.error('Failed to fetch reports', err);
+        console.error('Failed to fetch reports or projects', err);
       } finally {
         setLoading(false);
       }
     };
-    fetchReports();
-  }, [statusFilter]);
+    fetchInitialData();
+  }, []);
+
+  const loadReports = async (page: number, filters: ReportFilters, append: boolean) => {
+    try {
+      setLoading(true);
+      const query = new URLSearchParams({ page: String(page), limit: String(PAGE_SIZE) });
+      Object.entries(filters).forEach(([key, value]) => {
+        if (value) query.set(key, value);
+      });
+
+      const response = await api.get<ReportsResponse>(`/reports?${query.toString()}`);
+      setReports((existingReports) => append
+        ? [...existingReports, ...response.data.data]
+        : response.data.data);
+      setPagination(response.data.pagination);
+      loadedPages.current.add(page);
+      return response.data.pagination;
+    } catch (err) {
+      console.error('Failed to fetch reports', err);
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleFilter = async (event: React.FormEvent) => {
+    event.preventDefault();
+    const nextFilters = { ...draftFilters };
+    setAppliedFilters(nextFilters);
+    setCurrentPage(1);
+    setReports([]);
+    loadedPages.current.clear();
+    await loadReports(1, nextFilters, false);
+  };
+
+  const handlePageChange = async (nextPage: number) => {
+    if (nextPage < 1 || nextPage > pagination.totalPages || nextPage === currentPage || loading) {
+      return;
+    }
+
+    if (!loadedPages.current.has(nextPage)) {
+      const nextPagination = await loadReports(nextPage, appliedFilters, true);
+      if (!nextPagination) return;
+    }
+
+    setCurrentPage(nextPage);
+  };
+
+  const visibleReports = reports.slice(
+    (currentPage - 1) * PAGE_SIZE,
+    currentPage * PAGE_SIZE,
+  );
 
   const getStatusBadge = (status: Report['status']) => {
     switch (status) {
@@ -47,17 +152,38 @@ export const ReportList: React.FC = () => {
     }
   };
 
+  // Week Selector Handler
+  const handleWeekSelect = (identifier: string) => {
+    const found = weekOptions.find((w) => w.weekIdentifier === identifier);
+    if (found) {
+      setSelectedWeek(found);
+      setDraftFilters((filters) => ({
+        ...filters,
+        startDate: found.weekStart,
+        endDate: found.weekEnd,
+      }));
+    } else {
+      setSelectedWeek(null);
+      setDraftFilters((filters) => ({
+        ...filters,
+        startDate: '',
+        endDate: '',
+      }));
+    }
+  };
+
   return (
     <div className="max-w-7xl mx-auto space-y-8">
+      <h1 className="page-title mb-6">All Reports</h1>
+
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <h1 className="page-title !mb-0">All Reports</h1>
-        
-        <div className="card px-4 py-2 flex items-center space-x-3 w-full md:w-auto">
-          <label className="text-sm font-bold text-gray-700 dark:text-gray-300">Filter:</label>
+
+
+        <form onSubmit={handleFilter} className="card p-4 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-3 w-full">
           <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="input-field !p-2 !bg-transparent border-none shadow-none focus:ring-0 w-auto"
+            value={draftFilters.status}
+            onChange={(e) => setDraftFilters((filters) => ({ ...filters, status: e.target.value }))}
+            className="input-field !p-2"
           >
             <option value="">All Statuses</option>
             <option value="DRAFT">Draft</option>
@@ -65,7 +191,59 @@ export const ReportList: React.FC = () => {
             <option value="NEEDS_CORRECTION">Needs Correction</option>
             <option value="APPROVED">Approved</option>
           </select>
-        </div>
+          <select
+            value={draftFilters.projectId}
+            onChange={(e) => setDraftFilters((filters) => ({ ...filters, projectId: e.target.value }))}
+            className="input-field !p-2"
+          >
+            <option value="">All Projects</option>
+            {projects.map((project) => (
+              <option key={project._id} value={project._id}>{project.name}</option>
+            ))}
+          </select>
+          {/* <input
+            type="date"
+            value={draftFilters.startDate}
+            onChange={(e) => setDraftFilters((filters) => ({ ...filters, startDate: e.target.value }))}
+            className="input-field !p-2"
+            aria-label="Start date"
+          />
+          <input
+            type="date"
+            value={draftFilters.endDate}
+            onChange={(e) => setDraftFilters((filters) => ({ ...filters, endDate: e.target.value }))}
+            className="input-field !p-2"
+            aria-label="End date"
+          /> */}
+          <div>
+            <select
+              value={selectedWeek?.weekIdentifier || ''}
+              onChange={(e) => handleWeekSelect(e.target.value)}
+              className="input-field"
+            >
+              <option value="">All Weeks</option>
+              {weekOptions.map((w) => (
+                <option key={w.weekIdentifier} value={w.weekIdentifier}>
+                  {w.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <button type="submit" className="btn-primary !py-2 flex items-center justify-center gap-2">
+            <Filter size={16} />
+            Filter
+          </button>
+          <button
+            type="button"
+            className="btn-secondary !py-2 flex items-center justify-center gap-2"
+            onClick={() => {
+              setSelectedWeek(null);
+              setDraftFilters(EMPTY_FILTERS);
+            }}
+          >
+            Reset
+          </button>
+        </form>
       </div>
 
       <div className="card overflow-hidden">
@@ -90,9 +268,9 @@ export const ReportList: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200/50 dark:divide-white/10">
-                {reports.map((report) => (
-                  <tr 
-                    key={report._id} 
+                {visibleReports.map((report) => (
+                  <tr
+                    key={report._id}
                     className="table-row"
                     onClick={() => navigate(`/reports/${report._id}`)}
                   >
@@ -116,6 +294,32 @@ export const ReportList: React.FC = () => {
             </table>
           </div>
         )}
+      </div>
+
+      <div className="flex items-center justify-between gap-4">
+        <span className="text-sm font-semibold text-gray-500 dark:text-gray-400">
+          Page {currentPage} of {pagination.totalPages}
+        </span>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => handlePageChange(currentPage - 1)}
+            disabled={!pagination.hasPrevPage || loading || currentPage == 0}
+            className="btn-secondary !p-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            aria-label="Previous page"
+          >
+            <ChevronLeft size={18} />
+          </button>
+          <button
+            type="button"
+            onClick={() => handlePageChange(currentPage + 1)}
+            disabled={currentPage == pagination.totalPages || loading}
+            className="btn-secondary !p-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            aria-label="Next page"
+          >
+            <ChevronRight size={18} />
+          </button>
+        </div>
       </div>
     </div>
   );

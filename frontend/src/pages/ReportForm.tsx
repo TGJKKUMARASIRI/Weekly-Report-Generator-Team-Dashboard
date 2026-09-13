@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { api } from '../lib/api';
 import { Plus, Trash2, Save, Send, AlertCircle, AlertTriangle, Trophy, Calendar } from 'lucide-react';
 import { getWeekOptions, type WeekOption } from '../utils/dateUtils';
+import Swal from 'sweetalert2';
 
 interface Task {
   taskName: string;
@@ -87,7 +88,14 @@ export const ReportForm: React.FC = () => {
           setProjectId(res.data[0]._id);
         }
       } catch (err) {
-        setError('Failed to load active projects');
+        const errMsg = 'Failed to load active projects';
+        setError(errMsg);
+        Swal.fire({
+          icon: 'error',
+          title: 'Error Loading Projects',
+          text: errMsg,
+          confirmButtonColor: '#ef4444',
+        });
       }
     };
 
@@ -134,7 +142,14 @@ export const ReportForm: React.FC = () => {
 
           setNotes(r.notes || '');
         } catch (err) {
-          setError('Failed to load report details');
+          const errMsg = 'Failed to load report details';
+          setError(errMsg);
+          Swal.fire({
+            icon: 'error',
+            title: 'Fetch Error',
+            text: errMsg,
+            confirmButtonColor: '#ef4444',
+          });
         }
       };
       fetchReport();
@@ -249,9 +264,28 @@ export const ReportForm: React.FC = () => {
       } else {
         await api.post('/reports', payload);
       }
+
+      await Swal.fire({
+        icon: 'success',
+        title: isSubmit ? 'Report Submitted!' : 'Draft Saved!',
+        text: isSubmit
+          ? 'Your weekly report has been submitted successfully.'
+          : 'Your draft has been saved successfully.',
+        timer: 2000,
+        showConfirmButton: false,
+      });
+
       navigate('/reports');
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to submit report');
+      const errMsg = err.response?.data?.message || 'Failed to submit report';
+      setError(errMsg);
+
+      Swal.fire({
+        icon: 'error',
+        title: isSubmit ? 'Submission Failed' : 'Save Failed',
+        text: errMsg,
+        confirmButtonColor: '#ef4444',
+      });
     } finally {
       setLoading(false);
     }
@@ -331,7 +365,7 @@ export const ReportForm: React.FC = () => {
                       <label className="label-text uppercase tracking-wider text-xs">Task Name</label>
                       <input
                         type="text"
-                        placeholder="Task title or narrative description..."
+                        placeholder="Task title or description..."
                         value={task.taskName}
                         onChange={(e) => handleTaskChange(idx, 'taskName', e.target.value)}
                         className="input-field"
@@ -353,7 +387,7 @@ export const ReportForm: React.FC = () => {
                     <label className="label-text uppercase tracking-wider text-xs">Output / Deliverable Produced</label>
                     <input
                       type="text"
-                      placeholder="e.g. PR #402 merged, API documentation published, design spec completed..."
+                      placeholder=""
                       value={task.deliverable || ''}
                       onChange={(e) => handleTaskChange(idx, 'deliverable', e.target.value)}
                       className="input-field"
@@ -448,6 +482,7 @@ export const ReportForm: React.FC = () => {
                 <label className="label-text">Development</label>
                 <input
                   type="number"
+                  min="0"
                   value={hoursWorked.development}
                   onChange={(e) => setHoursWorked({ ...hoursWorked, development: Number(e.target.value) })}
                   className="input-field"
@@ -457,6 +492,7 @@ export const ReportForm: React.FC = () => {
                 <label className="label-text">Testing</label>
                 <input
                   type="number"
+                  min="0"
                   value={hoursWorked.testing}
                   onChange={(e) => setHoursWorked({ ...hoursWorked, testing: Number(e.target.value) })}
                   className="input-field"
@@ -466,6 +502,7 @@ export const ReportForm: React.FC = () => {
                 <label className="label-text">Meetings</label>
                 <input
                   type="number"
+                  min="0"
                   value={hoursWorked.meetings}
                   onChange={(e) => setHoursWorked({ ...hoursWorked, meetings: Number(e.target.value) })}
                   className="input-field"
@@ -475,6 +512,7 @@ export const ReportForm: React.FC = () => {
                 <label className="label-text">Documentation</label>
                 <input
                   type="number"
+                  min="0"
                   value={hoursWorked.documentation}
                   onChange={(e) => setHoursWorked({ ...hoursWorked, documentation: Number(e.target.value) })}
                   className="input-field"

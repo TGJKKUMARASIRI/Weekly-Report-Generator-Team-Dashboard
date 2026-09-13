@@ -7,25 +7,79 @@ const router = Router();
 // GET /api/reports - Fetch reports based on role
 router.get('/', authenticateJWT, async (req: AuthRequest, res) => {
   try {
-    const { status, userId, projectId } = req.query;
+    const {
+      status,
+      userId,
+      projectId,
+      startDate,
+      endDate,
+      page = 1,
+      limit = 10
+    } = req.query;
+
     const filter: any = {};
 
-    // Team members only see their own reports; Managers/Admins can query all or filter by user
+    // 1. Role-based Access Control (RBAC) & Team Member Filter
     if (req.user?.role === 'TEAM_MEMBER') {
       filter.userId = req.user.id;
     } else if (userId) {
       filter.userId = userId;
     }
 
-    if (status) filter.status = status;
-    if (projectId) filter.projectId = projectId;
+    // Exclude DRAFT reports for non-team members
+    if (req.user?.role !== 'TEAM_MEMBER') {
+      filter.status = { $ne: 'DRAFT' };
+    }
 
-    const reports = await Report.find(filter)
-      .populate('userId', 'name email role')
-      .populate('projectId', 'name description')
-      .sort({ weekStart: -1 });
+    // 2. Project / Category Filter
+    if (projectId) {
+      filter.projectId = projectId;
+    }
 
-    return res.json(reports);
+    // 3. Status Filter (Submitted / Needs Correction / Approved)[cite: 2]
+    if (status) {
+      filter.status = status;
+    }
+
+    // 4. Date Range Filtering (Matches reports overlapping or within range)[cite: 2]
+    if (startDate || endDate) {
+      filter.weekStart = {};
+      if (startDate) {
+        filter.weekStart.$gte = new Date(startDate as string);
+      }
+      if (endDate) {
+        filter.weekStart.$lte = new Date(endDate as string);
+      }
+    }
+
+    // 5. Pagination Setup
+    const pageNum = Math.max(1, parseInt(page as string, 10) || 1);
+    const limitNum = Math.max(1, parseInt(limit as string, 10) || 10);
+    const skip = (pageNum - 1) * limitNum;
+
+    // Execute query and total count concurrently for optimal performance
+    const [reports, totalReports] = await Promise.all([
+      Report.find(filter)
+        .populate('userId', 'name email role')
+        .populate('projectId', 'name description')
+        .sort({ weekStart: -1 })
+        .skip(skip)
+        .limit(limitNum),
+      Report.countDocuments(filter),
+    ]);
+
+    // Return structured payload containing metadata and records
+    return res.json({
+      data: reports,
+      pagination: {
+        totalReports,
+        currentPage: pageNum,
+        totalPages: Math.ceil(totalReports / limitNum),
+        limit: limitNum,
+        hasNextPage: pageNum * limitNum < totalReports,
+        hasPrevPage: pageNum > 1,
+      },
+    });
   } catch (error) {
     return res.status(500).json({ message: 'Failed to fetch reports', error });
   }
@@ -67,13 +121,14 @@ router.post('/', authenticateJWT, async (req: AuthRequest, res) => {
     }
 
     // Quick validation before saving
-    const existingReport = await Report.findOne({ 
-      userId: req.user.id, 
-      weekIdentifier: req.body.weekIdentifier 
+    const existingReport = await Report.findOne({
+      userId: req.user.id,
+      projectId: req.body.projectId,
+      weekIdentifier: req.body.weekIdentifier
     });
 
     if (existingReport) {
-      return res.status(400).json({ message: "You have already created a report for this week." });
+      return res.status(400).json({ message: "You have already created a report for this project for the selected week." });
     }
 
     const reportStatus = isSubmit ? ReportStatus.SUBMITTED : ReportStatus.DRAFT;
@@ -141,7 +196,7 @@ router.put('/:id', authenticateJWT, async (req: AuthRequest, res) => {
     if (isSubmit) {
       report.status = ReportStatus.SUBMITTED;
       const newVersionNum = (report.versions?.length || 0) + 1;
-      
+
       report.versions.push({
         versionNumber: newVersionNum,
         snapshot: report.toObject(),
@@ -160,7 +215,7 @@ router.put('/:id', authenticateJWT, async (req: AuthRequest, res) => {
 router.post('/:id/review', authenticateJWT, requireRoles('MANAGER', 'ADMIN'), async (req: AuthRequest, res) => {
   try {
     const { action, comment } = req.body; // action: 'APPROVED' | 'REQUEST_CORRECTION'
-    
+
     if (!['APPROVED', 'REQUEST_CORRECTION'].includes(action)) {
       return res.status(400).json({ message: 'Invalid review action' });
     }
@@ -173,6 +228,7 @@ router.post('/:id/review', authenticateJWT, requireRoles('MANAGER', 'ADMIN'), as
       reviewerId: req.user?.id as any,
       action,
       comment: comment || '',
+      versionNumber: report.versions?.length || 1,
       createdAt: new Date()
     });
 

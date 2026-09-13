@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../lib/api';
 import { FileText, CheckCircle, Clock, AlertTriangle } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 interface Report {
   _id: string;
@@ -16,13 +17,14 @@ interface Report {
 export const Dashboard: React.FC = () => {
   const [reports, setReports] = useState<Report[]>([]);
   const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
   const navigate = useNavigate();
 
   const fetchReports = async () => {
     try {
       setLoading(true);
       const res = await api.get('/reports');
-      setReports(res.data);
+      setReports(res.data.data);
     } catch (err) {
       console.error('Failed to fetch reports', err);
     } finally {
@@ -99,9 +101,11 @@ export const Dashboard: React.FC = () => {
 
       <div className="flex flex-col md:flex-row justify-between items-center gap-4">
         <h2 className="section-title !mb-0">Recent Reports</h2>
-        <Link to="/reports/new" className="btn-primary">
-          + New Report
-        </Link>
+        {user?.role === 'TEAM_MEMBER' && (
+          <Link to="/reports/new" className="btn-primary">
+            + New Report
+          </Link>
+        )}
       </div>
 
       {/* Recent Report List Table */}
