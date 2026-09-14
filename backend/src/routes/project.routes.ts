@@ -28,7 +28,7 @@ router.get('/all', authenticateJWT, requireRoles('MANAGER'), async (req, res) =>
 router.get('/:id', authenticateJWT, async (req, res) => {
   try {
     const { id } = req.params;
-    const project = await Project.findById(id).populate('members', 'name email');
+    const project = await Project.findById(id).populate('members', 'name email role');
 
     if (!project) {
       return res.status(404).json({ message: 'Project not found' });

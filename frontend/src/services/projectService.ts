@@ -6,6 +6,16 @@ export interface Project {
   name: string;
   description?: string;
   isActive: boolean;
+  members?: UserMember[];
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface UserMember {
+  _id: string;
+  name: string;
+  email: string;
+  role?: string;
 }
 
 // Service helpers for Project management
@@ -29,7 +39,7 @@ export const createProject = async (project: { name: string; description?: strin
   return response.data;
 };
 
-export const updateProject = async (id: string, updates: Partial<{ name: string; description: string }>): Promise<Project> => {
+export const updateProject = async (id: string, updates: Partial<{ name: string; description: string; members?: string[]; isActive?: boolean; }>): Promise<Project> => {
   const response = await api.put(`/projects/${id}`, updates);
   return response.data;
 };
@@ -37,5 +47,11 @@ export const updateProject = async (id: string, updates: Partial<{ name: string;
 export const deactivateProject = async (id: string): Promise<Project> => {
   // Soft delete via isActive flag
   const response = await api.patch(`/projects/${id}`, { isActive: false });
+  return response.data;
+};
+
+// Fetch list of available team members for project assignment
+export const getTeamMembers = async (): Promise<UserMember[]> => {
+  const response = await api.get('/auth/team-members');
   return response.data;
 };

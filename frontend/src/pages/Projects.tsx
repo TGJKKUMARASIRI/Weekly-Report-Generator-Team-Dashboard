@@ -259,7 +259,7 @@ export const Projects: React.FC = () => {
                     className="table-row hover:bg-gray-50/50 dark:hover:bg-gray-700/50 cursor-pointer transition-colors"
                     onClick={() => {
                       // Navigate to dedicated project page when clicked
-                      // navigate(`/projects/${project._id}`);
+                      navigate(`/projects/${project._id}`);
                       console.log(`Clicked project: ${project._id}`);
                     }}
                   >

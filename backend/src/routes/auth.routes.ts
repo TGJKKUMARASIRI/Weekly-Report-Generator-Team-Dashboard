@@ -20,6 +20,23 @@ router.get('/users', authenticateJWT, async (req: AuthRequest, res) => {
   }
 });
 
+// GET /api/auth/team-members (Fetch only team members for project assignment)
+router.get('/team-members', authenticateJWT, async (req: AuthRequest, res) => {
+  try {
+    if (req.user?.role !== Role.MANAGER && req.user?.role !== Role.ADMIN) {
+      return res.status(403).json({ message: 'Access denied' });
+    }
+
+    const teamMembers = await User.find({ role: Role.TEAM_MEMBER, isActive: true })
+      .select('-passwordHash')
+      .sort({ name: 1 });
+
+    return res.json(teamMembers);
+  } catch (error) {
+    return res.status(500).json({ message: 'Server error fetching team members' });
+  }
+});
+
 // POST /api/auth/register
 router.post('/register', async (req, res) => {
   try {
