@@ -9,7 +9,7 @@ interface UserProfile {
   _id: string;
   name: string;
   email: string;
-  role: 'TEAM_MEMBER' | 'MANAGER' | 'ADMIN';
+  role: 'TEAM_MEMBER' | 'MANAGER';
   createdAt?: string;
 }
 
@@ -55,8 +55,6 @@ export const UserDetails: React.FC = () => {
 
   const getRoleBadge = (role?: string) => {
     switch (role) {
-      case 'ADMIN':
-        return <span className="badge badge-error">Admin</span>;
       case 'MANAGER':
         return <span className="badge badge-info">Manager</span>;
       default:

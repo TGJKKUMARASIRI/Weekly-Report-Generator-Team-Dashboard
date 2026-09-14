@@ -10,7 +10,7 @@ export interface CreateUserData {
 export interface UpdateUserData {
   name?: string;
   email?: string;
-  role?: 'TEAM_MEMBER' | 'MANAGER' | 'ADMIN';
+  role?: 'TEAM_MEMBER' | 'MANAGER';
   isActive?: boolean;
 }
 
@@ -30,7 +30,7 @@ export const authService = {
     return response.data;
   },
 
-  // Fetch all users (Manager / Admin access)
+  // Fetch all users (Manager)
   getUsers: async () => {
     const response = await api.get('/auth/users');
     return response.data;

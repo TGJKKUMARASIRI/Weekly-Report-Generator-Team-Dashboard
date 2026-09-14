@@ -19,7 +19,7 @@ interface User {
   _id: string; // or mongoose.Types.ObjectId
   name: string;
   email: string;
-  role: 'TEAM_MEMBER' | 'MANAGER' | 'ADMIN';
+  role: 'TEAM_MEMBER' | 'MANAGER';
 }
 
 interface ReportVersion {

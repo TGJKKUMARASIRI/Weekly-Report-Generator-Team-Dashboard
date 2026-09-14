@@ -212,7 +212,7 @@ router.put('/:id', authenticateJWT, async (req: AuthRequest, res) => {
 });
 
 // POST /api/reports/:id/review - Manager Review (Approve or Request Correction)
-router.post('/:id/review', authenticateJWT, requireRoles('MANAGER', 'ADMIN'), async (req: AuthRequest, res) => {
+router.post('/:id/review', authenticateJWT, requireRoles('MANAGER'), async (req: AuthRequest, res) => {
   try {
     const { action, comment } = req.body; // action: 'APPROVED' | 'REQUEST_CORRECTION'
 

@@ -9,7 +9,7 @@ const router = Router();
 // GET /api/auth/users (Fetch all team members for managers)
 router.get('/users', authenticateJWT, async (req: AuthRequest, res) => {
   try {
-    if (req.user?.role !== Role.MANAGER && req.user?.role !== Role.ADMIN) {
+    if (req.user?.role !== Role.MANAGER) {
       return res.status(403).json({ message: 'Access denied' });
     }
 
@@ -23,7 +23,7 @@ router.get('/users', authenticateJWT, async (req: AuthRequest, res) => {
 // GET /api/auth/team-members (Fetch only team members for project assignment)
 router.get('/team-members', authenticateJWT, async (req: AuthRequest, res) => {
   try {
-    if (req.user?.role !== Role.MANAGER && req.user?.role !== Role.ADMIN) {
+    if (req.user?.role !== Role.MANAGER) {
       return res.status(403).json({ message: 'Access denied' });
     }
 
@@ -81,7 +81,7 @@ router.post('/register', async (req, res) => {
 // POST /api/auth/users (Manager creates a user directly)
 router.post('/users', authenticateJWT, async (req: AuthRequest, res) => {
   try {
-    if (req.user?.role !== Role.MANAGER && req.user?.role !== Role.ADMIN) {
+    if (req.user?.role !== Role.MANAGER) {
       return res.status(403).json({ message: 'Access denied' });
     }
 
@@ -159,7 +159,7 @@ router.get('/me', authenticateJWT, async (req: AuthRequest, res) => {
 // PATCH /api/auth/users/:id (Update user profile/status)
 router.patch('/users/:id', authenticateJWT, async (req: AuthRequest, res) => {
   try {
-    if (req.user?.role !== Role.MANAGER && req.user?.role !== Role.ADMIN) {
+    if (req.user?.role !== Role.MANAGER) {
       return res.status(403).json({ message: 'Access denied' });
     }
 

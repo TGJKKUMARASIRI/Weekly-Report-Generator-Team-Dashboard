@@ -27,7 +27,7 @@ export const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children }) => {
       ? [{ name: 'New Report', path: '/reports/new', icon: PlusCircle }]
       : []),
     ...(user?.role === 'MANAGER' ? [{ name: 'Projects', path: '/projects', icon: Folder }] : []),
-    ...(user?.role === 'MANAGER' || user?.role === 'ADMIN'
+    ...(user?.role === 'MANAGER'
       ? [{ name: 'Users', path: '/users', icon: Users }]
       : []),
   ];

@@ -3,7 +3,6 @@ import { Schema, model } from 'mongoose';
 export enum Role {
   TEAM_MEMBER = 'TEAM_MEMBER',
   MANAGER = 'MANAGER',
-  ADMIN = 'ADMIN'
 }
 
 const userSchema = new Schema({

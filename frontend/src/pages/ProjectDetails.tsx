@@ -47,7 +47,7 @@ export const ProjectDetails: React.FC = () => {
   const [savingMembers, setSavingMembers] = useState<boolean>(false);
 
   useEffect(() => {
-    if (user?.role !== 'MANAGER' && user?.role !== 'ADMIN') {
+    if (user?.role !== 'MANAGER') {
       navigate('/');
       return;
     }

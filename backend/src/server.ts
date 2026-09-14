@@ -5,6 +5,7 @@ import mongoose from 'mongoose';
 import authRoutes from './routes/auth.routes.js';
 import projectRoutes from './routes/project.routes.js';
 import reportRoutes from './routes/report.routes.js';
+import dashboardRoutes from './routes/dashboard.routes.js';
 
 dotenv.config();
 
@@ -25,6 +26,7 @@ app.get('/health', (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/projects', projectRoutes);
 app.use('/api/reports', reportRoutes);
+app.use('/api/dashboard', dashboardRoutes);
 
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => {
