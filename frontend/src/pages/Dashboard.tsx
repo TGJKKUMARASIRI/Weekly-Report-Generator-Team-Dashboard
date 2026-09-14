@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { api } from '../lib/api';
+import { reportService } from '../services/reportService';
 import { FileText, CheckCircle, Clock, AlertTriangle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import Swal from 'sweetalert2';
 
 interface Report {
   _id: string;
@@ -23,10 +24,15 @@ export const Dashboard: React.FC = () => {
   const fetchReports = async () => {
     try {
       setLoading(true);
-      const res = await api.get('/reports');
-      setReports(res.data.data);
+      const res = await reportService.getReports();
+      setReports(res.data);
     } catch (err) {
       console.error('Failed to fetch reports', err);
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: 'Failed to fetch dashboard data.',
+      });
     } finally {
       setLoading(false);
     }

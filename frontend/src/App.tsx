@@ -7,6 +7,7 @@ import { Dashboard } from './pages/Dashboard';
 import { ReportForm } from './pages/ReportForm';
 import { ReportList } from './pages/ReportList';
 import { ReportDetail } from './pages/ReportDetail';
+import { Projects } from './pages/Projects';
 import { SidebarLayout } from './components/SidebarLayout';
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -66,6 +67,14 @@ export function App() {
           element={
             <ProtectedRoute>
               <ReportForm />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/projects"
+          element={
+            <ProtectedRoute>
+              <Projects />
             </ProtectedRoute>
           }
         />

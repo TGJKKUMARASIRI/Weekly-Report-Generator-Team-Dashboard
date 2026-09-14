@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
-import { LayoutDashboard, PlusCircle, LogOut, FileText, Menu, X, Sun, Moon, List } from 'lucide-react';
+import { LayoutDashboard, PlusCircle, LogOut, FileText, Menu, X, Sun, Moon, List, Folder } from 'lucide-react';
 
 interface SidebarLayoutProps {
   children: React.ReactNode;
@@ -26,6 +26,7 @@ export const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children }) => {
     ...(user?.role === 'TEAM_MEMBER'
       ? [{ name: 'New Report', path: '/reports/new', icon: PlusCircle }]
       : []),
+    ...(user?.role === 'MANAGER' ? [{ name: 'Projects', path: '/projects', icon: Folder }] : []),
   ];
 
   return (

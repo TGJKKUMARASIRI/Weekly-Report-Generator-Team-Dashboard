@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { api } from '../lib/api';
+import { authService } from '../services/authService';
 
 interface User {
   id: string;
@@ -30,8 +30,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return;
       }
       try {
-        const response = await api.get('/auth/me');
-        setUser(response.data);
+        const data = await authService.getMe();
+        setUser(data);
       } catch (err) {
         localStorage.removeItem('token');
         setToken(null);

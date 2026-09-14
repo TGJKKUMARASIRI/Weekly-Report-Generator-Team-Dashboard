@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../lib/api';
+import { reportService } from '../services/reportService';
 import { ChevronLeft, ChevronRight, Filter } from 'lucide-react';
 import { getWeekOptions, type WeekOption } from '../utils/dateUtils';
+import Swal from 'sweetalert2';
 
 interface Report {
   _id: string;
@@ -34,10 +36,7 @@ interface ReportPagination {
   hasPrevPage: boolean;
 }
 
-interface ReportsResponse {
-  data: Report[];
-  pagination: ReportPagination;
-}
+
 
 const PAGE_SIZE = 10;
 const EMPTY_FILTERS: ReportFilters = {
@@ -72,15 +71,20 @@ export const ReportList: React.FC = () => {
       try {
         setLoading(true);
         const [reportsResponse, projectsResponse] = await Promise.all([
-          api.get<ReportsResponse>(`/reports?page=1&limit=${PAGE_SIZE}`),
+          reportService.getReports({ page: 1, limit: PAGE_SIZE }),
           api.get<Project[]>('/projects'),
         ]);
-        setReports(reportsResponse.data.data);
-        setPagination(reportsResponse.data.pagination);
+        setReports(reportsResponse.data);
+        setPagination(reportsResponse.pagination);
         loadedPages.current.add(1);
         setProjects(projectsResponse.data);
       } catch (err) {
         console.error('Failed to fetch reports or projects', err);
+        Swal.fire({
+          icon: 'error',
+          title: 'Error Loading Data',
+          text: 'Failed to fetch reports or projects. Please try again later.',
+        });
       } finally {
         setLoading(false);
       }
@@ -91,20 +95,25 @@ export const ReportList: React.FC = () => {
   const loadReports = async (page: number, filters: ReportFilters, append: boolean) => {
     try {
       setLoading(true);
-      const query = new URLSearchParams({ page: String(page), limit: String(PAGE_SIZE) });
+      const params: any = { page: String(page), limit: String(PAGE_SIZE) };
       Object.entries(filters).forEach(([key, value]) => {
-        if (value) query.set(key, value);
+        if (value) params[key] = value;
       });
 
-      const response = await api.get<ReportsResponse>(`/reports?${query.toString()}`);
+      const data = await reportService.getReports(params);
       setReports((existingReports) => append
-        ? [...existingReports, ...response.data.data]
-        : response.data.data);
-      setPagination(response.data.pagination);
+        ? [...existingReports, ...data.data]
+        : data.data);
+      setPagination(data.pagination);
       loadedPages.current.add(page);
-      return response.data.pagination;
+      return data.pagination;
     } catch (err) {
       console.error('Failed to fetch reports', err);
+      Swal.fire({
+        icon: 'error',
+        title: 'Error Loading Reports',
+        text: 'Failed to fetch reports for the selected page.',
+      });
       return null;
     } finally {
       setLoading(false);

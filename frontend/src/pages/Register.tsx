@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { api } from '../lib/api';
+import { authService } from '../services/authService';
 import { UserPlus, FileText } from 'lucide-react';
+import Swal from 'sweetalert2';
 
 export const Register: React.FC = () => {
   const [name, setName] = useState('');
@@ -20,11 +21,18 @@ export const Register: React.FC = () => {
     setLoading(true);
 
     try {
-      const response = await api.post('/auth/register', { name, email, password, role });
-      login(response.data.token, response.data.user);
+      const data = await authService.register({ name, email, password, role });
+      login(data.token, data.user);
       navigate('/');
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Registration failed.');
+      const errorMsg = err.response?.data?.message || 'Registration failed.';
+      setError(errorMsg);
+      Swal.fire({
+        icon: 'error',
+        title: 'Registration Failed',
+        text: errorMsg,
+        confirmButtonColor: '#ef4444',
+      });
     } finally {
       setLoading(false);
     }

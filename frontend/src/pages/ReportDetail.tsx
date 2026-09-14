@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { api } from '../lib/api';
+import { reportService } from '../services/reportService';
 import { useAuth } from '../context/AuthContext';
 import { Edit3, CheckCircle, AlertTriangle, ArrowLeft, Trophy, History } from 'lucide-react';
+import Swal from 'sweetalert2';
 
 interface BlockerItem {
   description: string;
@@ -108,9 +109,9 @@ export const ReportDetail: React.FC = () => {
   const fetchReport = async () => {
     try {
       setLoading(true);
-      const res = await api.get(`/reports/${id}`);
-      setReport(res.data);
-      const versions = res.data.versions || [];
+      const data = await reportService.getReportById(id as string);
+      setReport(data);
+      const versions = data.versions || [];
       setSelectedVersionNumber(versions.length > 1 ? versions[versions.length - 2].versionNumber : null);
     } catch (err) {
       console.error('Failed to load report', err);
@@ -126,15 +127,28 @@ export const ReportDetail: React.FC = () => {
   const handleReviewSubmit = async () => {
     if (!reviewModal.action) return;
     try {
-      await api.post(`/reports/${id}/review`, {
+      await reportService.submitReportReview(id as string, {
         action: reviewModal.action,
         comment: reviewComment,
       });
       setReviewModal({ open: false, action: null });
       setReviewComment('');
       fetchReport();
-    } catch (err) {
-      alert('Failed to submit review');
+      Swal.fire({
+        icon: 'success',
+        title: 'Review Submitted',
+        text: 'Your review has been successfully saved.',
+        timer: 2000,
+        showConfirmButton: false,
+      });
+    } catch (err: any) {
+      const errorMsg = err.response?.data?.message || 'Failed to submit review.';
+      Swal.fire({
+        icon: 'error',
+        title: 'Review Failed',
+        text: errorMsg,
+        confirmButtonColor: '#ef4444',
+      });
     }
   };
 

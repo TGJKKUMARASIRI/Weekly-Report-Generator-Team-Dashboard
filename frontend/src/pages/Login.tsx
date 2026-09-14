@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { api } from '../lib/api';
+import { authService } from '../services/authService';
 import { LogIn, FileText } from 'lucide-react';
+import Swal from 'sweetalert2';
 
 export const Login: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -18,11 +19,18 @@ export const Login: React.FC = () => {
     setLoading(true);
 
     try {
-      const response = await api.post('/auth/login', { email, password });
-      login(response.data.token, response.data.user);
+      const data = await authService.login({ email, password });
+      login(data.token, data.user);
       navigate('/');
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Login failed. Please check your credentials.');
+      const errorMsg = err.response?.data?.message || 'Login failed. Please check your credentials.';
+      setError(errorMsg);
+      Swal.fire({
+        icon: 'error',
+        title: 'Login Failed',
+        text: errorMsg,
+        confirmButtonColor: '#ef4444',
+      });
     } finally {
       setLoading(false);
     }

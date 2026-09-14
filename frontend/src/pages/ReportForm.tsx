@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { api } from '../lib/api';
+import { reportService } from '../services/reportService';
+import { getProjects } from '../services/projectService';
 import { Plus, Trash2, Save, Send, AlertCircle, AlertTriangle, Trophy, Calendar } from 'lucide-react';
 import { getWeekOptions, type WeekOption } from '../utils/dateUtils';
 import Swal from 'sweetalert2';
@@ -82,10 +83,10 @@ export const ReportForm: React.FC = () => {
   useEffect(() => {
     const fetchProjects = async () => {
       try {
-        const res = await api.get('/projects');
-        setProjects(res.data);
-        if (res.data.length > 0 && !projectId) {
-          setProjectId(res.data[0]._id);
+        const data = await getProjects();
+        setProjects(data);
+        if (data.length > 0 && !projectId) {
+          setProjectId(data[0]._id);
         }
       } catch (err) {
         const errMsg = 'Failed to load active projects';
@@ -104,8 +105,7 @@ export const ReportForm: React.FC = () => {
     if (id) {
       const fetchReport = async () => {
         try {
-          const res = await api.get(`/reports/${id}`);
-          const r = res.data;
+          const r = await reportService.getReportById(id);
           setProjectId(r.projectId._id || r.projectId);
 
           // Match existing report dates to an available week option, or create custom fallback
@@ -260,9 +260,9 @@ export const ReportForm: React.FC = () => {
 
     try {
       if (id) {
-        await api.put(`/reports/${id}`, payload);
+        await reportService.updateReport(id, payload);
       } else {
-        await api.post('/reports', payload);
+        await reportService.createReport(payload);
       }
 
       await Swal.fire({
