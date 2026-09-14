@@ -12,6 +12,7 @@ import { SidebarLayout } from './components/SidebarLayout';
 import { UserDetails } from './pages/UserDetails';
 import { Users } from './pages/Users';
 import { ProjectDetails } from './pages/ProjectDetails';
+import { CrossTeamWeeklySummary } from './pages/CrossTeamWeeklySummary';
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, isLoading } = useAuth();
@@ -102,6 +103,14 @@ export function App() {
           element={
             <ProtectedRoute>
               <Users/>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/CrossTeamWeeklySummary"
+          element={
+            <ProtectedRoute>
+              <CrossTeamWeeklySummary/>
             </ProtectedRoute>
           }
         />

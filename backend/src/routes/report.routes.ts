@@ -85,6 +85,84 @@ router.get('/', authenticateJWT, async (req: AuthRequest, res) => {
   }
 });
 
+// Helper to generate current ISO week identifier (e.g. "2026-W37")
+const getCurrentWeekIdentifier = (): string => {
+  const d = new Date(Date.UTC(new Date().getFullYear(), new Date().getMonth(), new Date().getDate()));
+  const dayNum = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  const weekNo = Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
+  return `${d.getUTCFullYear()}-W${String(weekNo).padStart(2, '0')}`;
+};
+
+/**
+ * GET /api/reports/cross-team-summary
+ * Allows managers/admins to view sections (Blockers, Achievements, Tasks, Next Week Tasks)
+ * across all team members side-by-side for a specific week.
+ */
+router.get(
+  '/cross-team-summary',
+  authenticateJWT,
+  requireRoles('MANAGER'),
+  async (req: AuthRequest, res) => {
+    try {
+      const { weekIdentifier, projectId } = req.query;
+
+      // Default to current ISO week if weekIdentifier is not provided
+      const targetWeek = (weekIdentifier as string) || getCurrentWeekIdentifier();
+
+      const filter: any = {
+        weekIdentifier: targetWeek,
+        status: { $ne: ReportStatus.DRAFT }, // Exclude draft reports
+      };
+
+      if (projectId) {
+        filter.projectId = projectId;
+      }
+
+      // Fetch reports with populated user and project details
+      const reports = await Report.find(filter)
+        .populate('userId', 'name email role department')
+        .populate('projectId', 'name description')
+        .sort({ createdAt: -1 });
+
+      // Structure aggregated data for clean side-by-side frontend consumption
+      const summary = reports.map((report: any) => ({
+        reportId: report._id,
+        status: report.status,
+        weekIdentifier: report.weekIdentifier,
+        user: {
+          id: report.userId?._id,
+          name: report.userId?.name || 'Unknown User',
+          email: report.userId?.email || '',
+        },
+        project: {
+          id: report.projectId?._id,
+          name: report.projectId?.name || 'Unassigned Project',
+        },
+        blockers: report.blockers || [],
+        achievements: report.achievements || [],
+        tasks: report.tasks || [],
+        nextWeekTasks: report.nextWeekTasks || '',
+        updatedAt: report.updatedAt,
+      }));
+
+      return res.json({
+        success: true,
+        weekIdentifier: targetWeek,
+        totalSubmittedMembers: summary.length,
+        data: summary,
+      });
+    } catch (error) {
+      console.error('Failed to fetch cross-team summary:', error);
+      return res.status(500).json({
+        message: 'Failed to retrieve cross-team weekly summary',
+        error,
+      });
+    }
+  }
+);
+
 // GET /api/reports/:id - Fetch single report details
 router.get('/:id', authenticateJWT, async (req: AuthRequest, res) => {
   try {

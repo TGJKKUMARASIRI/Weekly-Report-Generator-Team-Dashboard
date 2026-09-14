@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
-import { LayoutDashboard, PlusCircle, LogOut, FileText, Menu, X, Sun, Moon, List, Folder, Users } from 'lucide-react';
+import { LayoutDashboard, PlusCircle, LogOut, FileText, Menu, X, Sun, Moon, List, Folder, Users, Columns3 } from 'lucide-react';
 
 interface SidebarLayoutProps {
   children: React.ReactNode;
@@ -30,23 +30,25 @@ export const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children }) => {
     ...(user?.role === 'MANAGER'
       ? [{ name: 'Users', path: '/users', icon: Users }]
       : []),
+    ...(user?.role === 'MANAGER'
+      ? [{ name: 'Weekly Summary', path: '/CrossTeamWeeklySummary', icon: Columns3 }]
+      : []),
   ];
 
   return (
     <div className="min-h-screen flex w-full">
       {/* Mobile Sidebar Overlay */}
       {isMobileOpen && (
-        <div 
+        <div
           className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 md:hidden transition-all duration-300"
           onClick={() => setIsMobileOpen(false)}
         />
       )}
 
       {/* Sidebar */}
-      <aside 
-        className={`fixed md:sticky top-4 h-[calc(100vh-2rem)] w-72 glass shadow-2xl z-50 rounded-3xl m-4 md:ml-4 md:my-4 flex flex-col border border-white/40 dark:border-white/10 transform transition-transform duration-300 ${
-          isMobileOpen ? 'translate-x-0' : '-translate-x-[120%] md:translate-x-0'
-        }`}
+      <aside
+        className={`fixed md:sticky top-4 h-[calc(100vh-2rem)] w-72 glass shadow-2xl z-50 rounded-3xl m-4 md:ml-4 md:my-4 flex flex-col border border-white/40 dark:border-white/10 transform transition-transform duration-300 ${isMobileOpen ? 'translate-x-0' : '-translate-x-[120%] md:translate-x-0'
+          }`}
       >
         {/* Logo area */}
         <div className="flex items-center justify-between p-8 h-24 border-b border-gray-200/50 dark:border-white/10 relative">
@@ -65,10 +67,10 @@ export const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children }) => {
           {navItems.map((item) => {
             const Icon = item.icon;
             // Check if active. If exact is true, match exactly. Otherwise, match prefix.
-            const isActive = item.exact 
+            const isActive = item.exact
               ? location.pathname === item.path
               : (location.pathname === item.path || (item.path !== '/' && location.pathname.startsWith(item.path)));
-            
+
             return (
               <Link
                 key={item.name}
@@ -107,15 +109,15 @@ export const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children }) => {
         {/* Top Header */}
         <header className="h-20 glass-panel sticky top-4 z-30 mx-4 mt-4 px-8 flex items-center justify-between border border-white/40 dark:border-white/10 shadow-sm rounded-3xl">
           <div className="flex items-center">
-            <button 
+            <button
               className="md:hidden mr-4 btn-icon"
               onClick={() => setIsMobileOpen(true)}
             >
               <Menu className="w-6 h-6" />
             </button>
             <h1 className="text-xl font-bold text-gray-800 dark:text-gray-100 hidden sm:block tracking-wide">
-              {navItems.find(item => item.exact ? location.pathname === item.path : (item.path !== '/' && location.pathname.startsWith(item.path)))?.name 
-               || (location.pathname === '/' ? 'Dashboard' : 'Report Details')}
+              {navItems.find(item => item.exact ? location.pathname === item.path : (item.path !== '/' && location.pathname.startsWith(item.path)))?.name
+                || (location.pathname === '/' ? 'Dashboard' : 'Report Details')}
             </h1>
           </div>
 
