@@ -67,7 +67,7 @@ export const Login: React.FC = () => {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="input-field"
-                placeholder="manager@example.com"
+                placeholder=""
               />
             </div>
             <div>
@@ -78,7 +78,7 @@ export const Login: React.FC = () => {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="input-field"
-                placeholder="••••••••"
+                placeholder=""
               />
             </div>
           </div>

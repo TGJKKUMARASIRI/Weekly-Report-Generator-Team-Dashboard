@@ -139,4 +139,49 @@ router.get('/me', authenticateJWT, async (req: AuthRequest, res) => {
   }
 });
 
+// PATCH /api/auth/users/:id (Update user profile/status)
+router.patch('/users/:id', authenticateJWT, async (req: AuthRequest, res) => {
+  try {
+    if (req.user?.role !== Role.MANAGER && req.user?.role !== Role.ADMIN) {
+      return res.status(403).json({ message: 'Access denied' });
+    }
+
+    const { id } = req.params;
+    const { name, email, role, isActive } = req.body;
+
+    const user = await User.findById(id);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Check email uniqueness if changing email
+    if (email && email !== user.email) {
+      const existingUser = await User.findOne({ email });
+      if (existingUser) {
+        return res.status(400).json({ message: 'Email is already in use' });
+      }
+      user.email = email;
+    }
+
+    if (name !== undefined) user.name = name;
+    if (typeof isActive === 'boolean') user.isActive = isActive;
+    if (role && Object.values(Role).includes(role)) user.role = role;
+
+    await user.save();
+
+    return res.json({
+      message: 'User updated successfully',
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        isActive: user.isActive,
+      },
+    });
+  } catch (error) {
+    return res.status(500).json({ message: 'Server error updating user' });
+  }
+});
+
 export default router;

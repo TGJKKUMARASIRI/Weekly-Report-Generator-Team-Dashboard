@@ -36,7 +36,9 @@ interface ReportPagination {
   hasPrevPage: boolean;
 }
 
-
+interface ReportListProps {
+  userId?: string;
+}
 
 const PAGE_SIZE = 10;
 const EMPTY_FILTERS: ReportFilters = {
@@ -46,7 +48,7 @@ const EMPTY_FILTERS: ReportFilters = {
   endDate: '',
 };
 
-export const ReportList: React.FC = () => {
+export const ReportList: React.FC<ReportListProps> = ({ userId }) => {
   const [reports, setReports] = useState<Report[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
@@ -70,8 +72,11 @@ export const ReportList: React.FC = () => {
     const fetchInitialData = async () => {
       try {
         setLoading(true);
+        const params: any = { page: '1', limit: String(PAGE_SIZE) };
+        if (userId) params.userId = userId;
+
         const [reportsResponse, projectsResponse] = await Promise.all([
-          reportService.getReports({ page: 1, limit: PAGE_SIZE }),
+          reportService.getReports(params),
           api.get<Project[]>('/projects'),
         ]);
         setReports(reportsResponse.data);
@@ -90,20 +95,20 @@ export const ReportList: React.FC = () => {
       }
     };
     fetchInitialData();
-  }, []);
+  }, [userId]);
 
   const loadReports = async (page: number, filters: ReportFilters, append: boolean) => {
     try {
       setLoading(true);
       const params: any = { page: String(page), limit: String(PAGE_SIZE) };
+      if (userId) params.userId = userId;
+
       Object.entries(filters).forEach(([key, value]) => {
         if (value) params[key] = value;
       });
 
       const data = await reportService.getReports(params);
-      setReports((existingReports) => append
-        ? [...existingReports, ...data.data]
-        : data.data);
+      setReports((existingReports) => (append ? [...existingReports, ...data.data] : data.data));
       setPagination(data.pagination);
       loadedPages.current.add(page);
       return data.pagination;
@@ -183,11 +188,9 @@ export const ReportList: React.FC = () => {
 
   return (
     <div className="max-w-7xl mx-auto space-y-8">
-      <h1 className="page-title mb-6">All Reports</h1>
+      {!userId && <h1 className="page-title mb-6">All Reports</h1>}
 
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-
-
         <form onSubmit={handleFilter} className="card p-4 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-3 w-full">
           <select
             value={draftFilters.status}
@@ -207,23 +210,11 @@ export const ReportList: React.FC = () => {
           >
             <option value="">All Projects</option>
             {projects.map((project) => (
-              <option key={project._id} value={project._id}>{project.name}</option>
+              <option key={project._id} value={project._id}>
+                {project.name}
+              </option>
             ))}
           </select>
-          {/* <input
-            type="date"
-            value={draftFilters.startDate}
-            onChange={(e) => setDraftFilters((filters) => ({ ...filters, startDate: e.target.value }))}
-            className="input-field !p-2"
-            aria-label="Start date"
-          />
-          <input
-            type="date"
-            value={draftFilters.endDate}
-            onChange={(e) => setDraftFilters((filters) => ({ ...filters, endDate: e.target.value }))}
-            className="input-field !p-2"
-            aria-label="End date"
-          /> */}
           <div>
             <select
               value={selectedWeek?.weekIdentifier || ''}
@@ -269,7 +260,7 @@ export const ReportList: React.FC = () => {
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr>
-                  <th className="table-header">Member</th>
+                  {!userId && <th className="table-header">Member</th>}
                   <th className="table-header">Project</th>
                   <th className="table-header">Week Duration</th>
                   <th className="table-header">Status</th>
@@ -283,9 +274,11 @@ export const ReportList: React.FC = () => {
                     className="table-row"
                     onClick={() => navigate(`/reports/${report._id}`)}
                   >
-                    <td className="table-cell font-bold text-gray-900 dark:text-white">
-                      {report.userId?.name || 'Unknown'}
-                    </td>
+                    {!userId && (
+                      <td className="table-cell font-bold text-gray-900 dark:text-white">
+                        {report.userId?.name || 'Unknown'}
+                      </td>
+                    )}
                     <td className="table-cell font-bold">
                       {report.projectId?.name || 'N/A'}
                     </td>
@@ -313,7 +306,7 @@ export const ReportList: React.FC = () => {
           <button
             type="button"
             onClick={() => handlePageChange(currentPage - 1)}
-            disabled={!pagination.hasPrevPage || loading || currentPage == 0}
+            disabled={!pagination.hasPrevPage || loading || currentPage === 0}
             className="btn-secondary !p-2 disabled:opacity-50 disabled:cursor-not-allowed"
             aria-label="Previous page"
           >
@@ -322,7 +315,7 @@ export const ReportList: React.FC = () => {
           <button
             type="button"
             onClick={() => handlePageChange(currentPage + 1)}
-            disabled={currentPage == pagination.totalPages || loading}
+            disabled={currentPage === pagination.totalPages || loading}
             className="btn-secondary !p-2 disabled:opacity-50 disabled:cursor-not-allowed"
             aria-label="Next page"
           >

@@ -9,7 +9,7 @@ export const Register: React.FC = () => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [role, setRole] = useState<'TEAM_MEMBER' | 'MANAGER'>('TEAM_MEMBER');
+  const role = 'TEAM_MEMBER';
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
@@ -68,7 +68,7 @@ export const Register: React.FC = () => {
               value={name}
               onChange={(e) => setName(e.target.value)}
               className="input-field"
-              placeholder="Jane Doe"
+              placeholder=""
             />
           </div>
           <div>
@@ -79,7 +79,7 @@ export const Register: React.FC = () => {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="input-field"
-              placeholder="jane@example.com"
+              placeholder=""
             />
           </div>
           <div>
@@ -90,19 +90,8 @@ export const Register: React.FC = () => {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="input-field"
-              placeholder="••••••••"
+              placeholder=""
             />
-          </div>
-          <div>
-            <label className="label-text">Role</label>
-            <select
-              value={role}
-              onChange={(e) => setRole(e.target.value as 'TEAM_MEMBER' | 'MANAGER')}
-              className="input-field appearance-none"
-            >
-              <option value="TEAM_MEMBER">Team Member</option>
-              <option value="MANAGER">Manager</option>
-            </select>
           </div>
 
           <button

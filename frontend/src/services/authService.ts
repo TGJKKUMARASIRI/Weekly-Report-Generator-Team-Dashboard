@@ -4,7 +4,14 @@ export interface CreateUserData {
   name: string;
   email: string;
   password: string;
+  role?: 'TEAM_MEMBER' | 'MANAGER';
+}
+
+export interface UpdateUserData {
+  name?: string;
+  email?: string;
   role?: 'TEAM_MEMBER' | 'MANAGER' | 'ADMIN';
+  isActive?: boolean;
 }
 
 export const authService = {
@@ -32,6 +39,11 @@ export const authService = {
   // Manager creates a user without switching active sessions
   createUser: async (userData: CreateUserData) => {
     const response = await api.post('/auth/users', userData);
+    return response.data;
+  },
+
+  updateUser: async (id: string, updateData: UpdateUserData) => {
+    const response = await api.patch(`/auth/users/${id}`, updateData);
     return response.data;
   },
 };
