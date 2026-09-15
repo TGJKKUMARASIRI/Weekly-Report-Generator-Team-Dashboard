@@ -146,7 +146,7 @@ export const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children }) => {
         </header>
 
         {/* Page Content */}
-        <div className="p-4 md:p-8 flex-1">
+        <div className="p-4 md:p-8 pb-24 md:pb-28 flex-1">
           {children}
         </div>
       </main>

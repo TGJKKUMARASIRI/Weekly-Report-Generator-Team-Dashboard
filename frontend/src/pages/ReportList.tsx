@@ -4,6 +4,7 @@ import { api } from '../lib/api';
 import { reportService } from '../services/reportService';
 import { ChevronLeft, ChevronRight, Filter } from 'lucide-react';
 import { getWeekOptions, type WeekOption } from '../utils/dateUtils';
+import { useAuth } from '../context/AuthContext';
 import Swal from 'sweetalert2';
 
 interface Report {
@@ -67,6 +68,8 @@ export const ReportList: React.FC<ReportListProps> = ({ userId }) => {
   const weekOptions = getWeekOptions();
 
   const [selectedWeek, setSelectedWeek] = useState<WeekOption | null>(null);
+
+  const { user } = useAuth();
 
   useEffect(() => {
     const fetchInitialData = async () => {
@@ -198,7 +201,9 @@ export const ReportList: React.FC<ReportListProps> = ({ userId }) => {
             className="input-field !p-2"
           >
             <option value="">All Statuses</option>
-            <option value="DRAFT">Draft</option>
+            {user?.role !== 'MANAGER' && (
+              <option value="DRAFT">Draft</option>
+            )}
             <option value="SUBMITTED">Submitted</option>
             <option value="NEEDS_CORRECTION">Needs Correction</option>
             <option value="APPROVED">Approved</option>
