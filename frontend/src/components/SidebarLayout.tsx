@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { LayoutDashboard, PlusCircle, LogOut, FileText, Menu, X, Sun, Moon, List, Folder, Users, Columns3 } from 'lucide-react';
+import { AIChatWidget } from './AIChatWidget';
 
 interface SidebarLayoutProps {
   children: React.ReactNode;
@@ -36,7 +37,7 @@ export const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children }) => {
   ];
 
   return (
-    <div className="min-h-screen flex w-full">
+    <div className="min-h-screen flex w-full relative">
       {/* Mobile Sidebar Overlay */}
       {isMobileOpen && (
         <div
@@ -149,6 +150,9 @@ export const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children }) => {
           {children}
         </div>
       </main>
+
+      {/* Floating AI Chat Assistant (Rendered only for Managers / Admins) */}
+      {(user?.role === 'MANAGER') && <AIChatWidget />}
     </div>
   );
 };
